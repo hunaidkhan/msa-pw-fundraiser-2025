@@ -1,0 +1,70 @@
+:root {
+  --palette-black: #0b0c0d;
+  --palette-white: #ffffff;
+  --palette-red: #c8102e;
+  --palette-green: #007a3d;
+  --palette-kufiya-pattern: repeating-linear-gradient(
+      45deg,
+      var(--palette-black) 0,
+      var(--palette-black) 8px,
+      transparent 8px,
+      transparent 16px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      var(--palette-black) 0,
+      var(--palette-black) 8px,
+      transparent 8px,
+      transparent 16px
+    ),
+    radial-gradient(
+      circle at center,
+      rgba(11, 12, 13, 0.9) 0,
+      rgba(11, 12, 13, 0.9) 1px,
+      transparent 1px,
+      transparent 100%
+    );
+}
+
+.palette-bg-black {
+  background-color: var(--palette-black);
+  color: var(--palette-white);
+}
+
+.palette-bg-white {
+  background-color: var(--palette-white);
+  color: var(--palette-black);
+}
+
+.palette-bg-green {
+  background-color: var(--palette-green);
+  color: var(--palette-white);
+}
+
+.palette-bg-red {
+  background-color: var(--palette-red);
+  color: var(--palette-white);
+}
+
+.palette-text-black {
+  color: var(--palette-black);
+}
+
+.palette-text-white {
+  color: var(--palette-white);
+}
+
+.palette-text-green {
+  color: var(--palette-green);
+}
+
+.palette-text-red {
+  color: var(--palette-red);
+}
+
+.kufiya-pattern {
+  background-color: var(--palette-white);
+  background-image: var(--palette-kufiya-pattern);
+  background-size: 48px 48px, 48px 48px, 12px 12px;
+  background-blend-mode: multiply;
+}
