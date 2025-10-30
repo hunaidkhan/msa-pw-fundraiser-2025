@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ApiError } from "square";
+import { SquareError } from "square";
 import { z, ZodError } from "zod";
 
 import { getFundById } from "@/config/funds";
@@ -57,7 +57,7 @@ async function ensureLocationSupportsCad() {
       );
     }
   } catch (error) {
-    if (error instanceof ApiError) {
+    if (error instanceof SquareError) {
       throw new LocationCurrencyError(
         `Unable to verify Square location currency (${env.SQUARE_LOCATION_ID}). ${
           error.errors?.[0]?.detail ?? error.errors?.[0]?.message ?? ""
@@ -144,7 +144,7 @@ export async function POST(request: Request) {
       return withCors(NextResponse.json({ error: error.message }, { status: 500 }));
     }
 
-    if (error instanceof ApiError) {
+    if (error instanceof SquareError) {
       const squareError = error.errors?.[0];
       const message = squareError?.detail ?? squareError?.message ?? "Unexpected error from Square";
       const status = error.statusCode ?? 502;
