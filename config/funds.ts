@@ -3,12 +3,16 @@ export type FundConfig = {
   name: string;
 };
 
-const FUND_DEFINITIONS: FundConfig[] = [];
+export const FUNDS: FundConfig[] = [
+  { id: "zakat", name: "Zakat" },
+  { id: "sadaqah", name: "Sadaqah" },
+  { id: "relief", name: "Emergency Relief" },
+];
 
 export function getFundById(id: string) {
-  return FUND_DEFINITIONS.find((fund) => fund.id === id);
+  return FUNDS.find((fund) => fund.id === id);
 }
 
 export function listFunds() {
-  return [...FUND_DEFINITIONS];
+  return [...FUNDS];
 }

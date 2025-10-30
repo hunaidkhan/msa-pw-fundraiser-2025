@@ -3,12 +3,16 @@ export type TeamConfig = {
   name: string;
 };
 
-const TEAM_DEFINITIONS: TeamConfig[] = [];
+export const TEAMS: TeamConfig[] = [
+  { id: "msa-uofa", name: "MSA UofA" },
+  { id: "youth", name: "Youth Team" },
+  { id: "volunteers", name: "Volunteers" },
+];
 
 export function getTeamById(id: string) {
-  return TEAM_DEFINITIONS.find((team) => team.id === id);
+  return TEAMS.find((team) => team.id === id);
 }
 
 export function listTeams() {
-  return [...TEAM_DEFINITIONS];
+  return [...TEAMS];
 }
