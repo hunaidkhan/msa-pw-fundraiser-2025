@@ -14,15 +14,36 @@ const CORS_HEADERS: HeadersInit = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+const amountNumberSchema = z.number({
+  error: (issue) => {
+    if (issue.input === undefined || issue.input === null || issue.input === "") {
+      return { message: "amount is required" };
+    }
+
+    if (typeof issue.input === "number" && Number.isNaN(issue.input)) {
+      return { message: "amount must be a number" };
+    }
+
+    return { message: "amount must be a number" };
+  },
+});
+
 const amountSchema = z
   .preprocess((value) => {
-    if (typeof value === "string" || typeof value === "number") {
-      const parsed = Number(value);
-      return parsed;
+    if (typeof value === "string") {
+      if (value.trim().length === 0) {
+        return undefined;
+      }
+
+      return Number(value);
+    }
+
+    if (typeof value === "number") {
+      return value;
     }
 
     return value;
-  }, z.number({ required_error: "amount is required", invalid_type_error: "amount must be a number" }))
+  }, amountNumberSchema)
   .refine((value) => Number.isFinite(value), { message: "amount must be a finite number" })
   .refine((value) => value >= 1, { message: "amount must be at least 1 CAD" })
   .refine((value) => value <= 100_000, { message: "amount must be at most 100000 CAD" });
