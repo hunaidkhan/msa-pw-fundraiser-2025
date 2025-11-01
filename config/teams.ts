@@ -7,6 +7,7 @@ export const TEAMS: TeamConfig[] = [
   { id: "msa-uofa", name: "MSA UofA" },
   { id: "youth", name: "Youth Team" },
   { id: "volunteers", name: "Volunteers" },
+  { id: "team-falcon", name: "Team Falcon" },
 ];
 
 export function getTeamById(id: string) {
