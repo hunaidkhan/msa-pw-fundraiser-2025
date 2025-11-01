@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { SquareClient, SquareEnvironment } from "square";
+import { ApiError, Client, Environment } from "square";
 import crypto from "node:crypto";
 import { getTeamById } from "@/config/teams";
 
@@ -7,10 +7,9 @@ const accessToken = process.env.SQUARE_ACCESS_TOKEN;
 const locationId = process.env.SQUARE_LOCATION_ID;
 
 const client = accessToken
-  ? new SquareClient({
-      accessToken,
-      environment:
-        process.env.NODE_ENV === "production" ? SquareEnvironment.Production : SquareEnvironment.Sandbox,
+  ? new Client({
+      bearerAuthCredentials: { accessToken },
+      environment: process.env.NODE_ENV === "production" ? Environment.Production : Environment.Sandbox,
     })
   : undefined;
 
@@ -34,7 +33,7 @@ export async function POST(request: Request) {
     const cents = Math.round(amount * 100);
     const team = teamId ? getTeamById(teamId) : undefined;
 
-    const { data } = await client.checkout.paymentLinks.create({
+    const { result } = await client.checkoutApi.createPaymentLink({
       idempotencyKey: crypto.randomUUID(),
       quickPay: {
         name: team ? `Donate to ${team.name}` : "Donate to Palestine Solidarity Fundraiser",
@@ -47,15 +46,12 @@ export async function POST(request: Request) {
       description: team
         ? `Support ${team.name}'s fundraiser for Palestinian liberation.`
         : "Support our collective fundraiser for Palestinian liberation.",
-      metadata: team
-        ? {
-            teamId: team.id,
-            teamSlug: team.slug,
-          }
-        : undefined,
+      paymentNote: team
+        ? `Team ${team.name} • ID ${team.id} • slug ${team.slug}`
+        : "General Palestine Solidarity contribution",
     });
 
-    const paymentLinkUrl = data?.paymentLink?.url ?? data?.payment_link?.url;
+    const paymentLinkUrl = result.paymentLink?.url ?? result.paymentLink?.longUrl;
 
     if (!paymentLinkUrl) {
       throw new Error("Square did not return a payment link URL.");
@@ -63,6 +59,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: paymentLinkUrl });
   } catch (error) {
+    if (error instanceof ApiError) {
+      const firstError = error.result?.errors?.[0];
+      const detail = firstError?.detail ?? firstError?.code ?? error.message;
+      return NextResponse.json({ error: detail ?? "Square request failed." }, { status: error.statusCode ?? 500 });
+    }
+
     const message = error instanceof Error ? error.message : "Unable to create payment link.";
     return NextResponse.json({ error: message }, { status: 500 });
   }

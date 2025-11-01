@@ -15,7 +15,7 @@
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "sonner": "^1.5.0",
-    "square": "^43.2.0"
+    "square": "^39.1.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
