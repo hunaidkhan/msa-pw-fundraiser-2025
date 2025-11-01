@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import DonateModal from "@/components/DonateModal";
 import SiteFooter from "@/components/SiteFooter";
 import SiteHeader from "@/components/SiteHeader";
@@ -38,31 +38,31 @@ export default function HomePage() {
           <div className="absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-[#ce1126]/20 blur-3xl" />
           <div className="relative mx-auto grid w-full max-w-6xl gap-12 px-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
             <div className="space-y-8">
-              <motion.p
+              <m.p
                 className="inline-flex items-center gap-2 rounded-full bg-white/70 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 shadow"
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, ease: "easeOut" }}
               >
                 Winter 2025 Solidarity Drive
-              </motion.p>
-              <motion.h1
+              </m.p>
+              <m.h1
                 className="text-4xl font-semibold leading-tight text-slate-950 sm:text-5xl lg:text-6xl"
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, ease: "easeOut", delay: 0.1 }}
               >
                 Stand steadfast with Palestine. Fuel relief, resilience, and student power.
-              </motion.h1>
-              <motion.p
+              </m.h1>
+              <m.p
                 className="max-w-2xl text-lg leading-relaxed text-slate-600"
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
               >
                 The MSA is mobilizing record-breaking mutual aid to keep families warm, fund rapid medical shipments, and uplift campus advocacy. Your solidarity gift powers direct relief where it is needed most.
-              </motion.p>
-              <motion.div
+              </m.p>
+              <m.div
                 className="flex flex-col gap-3 sm:flex-row"
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -81,8 +81,8 @@ export default function HomePage() {
                 >
                   Learn how funds are used
                 </a>
-              </motion.div>
-              <motion.dl
+              </m.div>
+              <m.dl
                 className="grid gap-6 sm:grid-cols-3"
                 initial="hidden"
                 whileInView="visible"
@@ -100,21 +100,32 @@ export default function HomePage() {
                   },
                 }}
               >
-                {["$150k goal", "1,200 care kits", "400 student advocates"].map((value, index) => (
-                  <motion.div
-                    key={value}
-                    className="rounded-3xl border border-slate-200 bg-white px-6 py-5 text-sm shadow-sm"
-                    variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } }}
-                  >
-                    <dt className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
-                      {index === 0 ? "Campaign Goal" : index === 1 ? "Aid Target" : "Students Mobilized"}
-                    </dt>
-                    <dd className="mt-2 text-2xl font-semibold text-slate-900">{value}</dd>
-                  </motion.div>
-                ))}
-              </motion.dl>
+                {["$150k goal", "1,200 care kits", "400 student advocates"].map(
+                  (value, index) => (
+                    <m.div
+                      key={value}
+                      className="rounded-3xl border border-slate-200 bg-white px-6 py-5 text-sm shadow-sm"
+                      variants={{
+                        hidden: { opacity: 0, y: 24 },
+                        visible: { opacity: 1, y: 0 },
+                      }}
+                    >
+                      <dt className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
+                        {index === 0
+                          ? "Campaign Goal"
+                          : index === 1
+                          ? "Aid Target"
+                          : "Students Mobilized"}
+                      </dt>
+                      <dd className="mt-2 text-2xl font-semibold text-slate-900">
+                        {value}
+                      </dd>
+                    </m.div>
+                  )
+                )}
+              </m.dl>
             </div>
-            <motion.div
+            <m.div
               className="relative rounded-[32px] border border-slate-200 bg-white/90 p-6 shadow-2xl"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -126,7 +137,7 @@ export default function HomePage() {
               </div>
               <div className="space-y-5">
                 {highlightCards.map((card) => (
-                  <motion.div
+                  <m.div
                     key={card.title}
                     className="rounded-2xl border border-slate-100 bg-white/80 p-5 text-sm shadow"
                     initial={{ opacity: 0, y: 24 }}
@@ -134,33 +145,39 @@ export default function HomePage() {
                     viewport={{ once: true, amount: 0.6 }}
                     transition={{ duration: 0.5, ease: "easeOut" }}
                   >
-                    <h3 className="text-base font-semibold text-slate-900">{card.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-slate-600">{card.description}</p>
-                  </motion.div>
+                    <h3 className="text-base font-semibold text-slate-900">
+                      {card.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                      {card.description}
+                    </p>
+                  </m.div>
                 ))}
               </div>
-            </motion.div>
+            </m.div>
           </div>
         </section>
 
         <section id="impact" className="border-t border-slate-200 bg-white/90 py-20">
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 lg:flex-row lg:items-center">
-            <motion.div
+            <m.div
               className="flex-1 space-y-4"
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.4 }}
               transition={{ duration: 0.6, ease: "easeOut" }}
             >
-              <h2 className="text-3xl font-semibold text-slate-950">Where your solidarity travels</h2>
+              <h2 className="text-3xl font-semibold text-slate-950">
+                Where your solidarity travels
+              </h2>
               <p className="text-base leading-relaxed text-slate-600">
                 We partner with trusted grassroots networks in Rafah, Khan Younis, Ramallah, and the diaspora to deliver winter supplies, emergency medical grants, and scholarship support. Donations also equip our student organizers with resources to advocate for lasting liberation.
               </p>
               <p className="text-base leading-relaxed text-slate-600">
                 Transparent reporting is sent to every donor, and each gift is fully tax-deductible through our 501(c)(3) fiscal sponsor.
               </p>
-            </motion.div>
-            <motion.div
+            </m.div>
+            <m.div
               className="flex-1 rounded-[32px] border border-slate-200 bg-gradient-to-br from-white via-[#f7f7f7] to-white p-8 shadow-xl"
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -194,7 +211,7 @@ export default function HomePage() {
               >
                 Give with impact
               </button>
-            </motion.div>
+            </m.div>
           </div>
         </section>
       </main>

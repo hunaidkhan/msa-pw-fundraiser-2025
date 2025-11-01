@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { toast } from "sonner";
 
 type DonateModalProps = {
@@ -50,9 +50,7 @@ export function DonateModal({ open, onOpenChange }: DonateModalProps) {
 
   function validate(): boolean {
     const nextErrors: FormErrors = {};
-    if (!form.name.trim()) {
-      nextErrors.name = "Please share your name.";
-    }
+    if (!form.name.trim()) nextErrors.name = "Please share your name.";
     if (!form.email.trim()) {
       nextErrors.email = "An email is required so we can send your receipt.";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
@@ -81,9 +79,7 @@ export function DonateModal({ open, onOpenChange }: DonateModalProps) {
     try {
       const response = await fetch("/api/create-payment-link", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: form.name.trim(),
           email: form.email.trim(),
@@ -92,14 +88,10 @@ export function DonateModal({ open, onOpenChange }: DonateModalProps) {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error("Unable to create donation link");
-      }
+      if (!response.ok) throw new Error("Unable to create donation link");
 
       const data = (await response.json()) as { url?: string };
-      if (!data?.url) {
-        throw new Error("Payment link was not returned.");
-      }
+      if (!data?.url) throw new Error("Payment link was not returned.");
 
       toast.success("Redirecting you to our secure donation portal…");
       handleOpenChange(false);
@@ -115,9 +107,7 @@ export function DonateModal({ open, onOpenChange }: DonateModalProps) {
   }
 
   function handleOpenChange(nextOpen: boolean) {
-    if (!nextOpen) {
-      setErrors({});
-    }
+    if (!nextOpen) setErrors({});
     onOpenChange(nextOpen);
   }
 
@@ -127,7 +117,7 @@ export function DonateModal({ open, onOpenChange }: DonateModalProps) {
         {open ? (
           <Dialog.Portal forceMount>
             <Dialog.Overlay asChild>
-              <motion.div
+              <m.div
                 className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -135,7 +125,7 @@ export function DonateModal({ open, onOpenChange }: DonateModalProps) {
               />
             </Dialog.Overlay>
             <Dialog.Content asChild forceMount>
-              <motion.div
+              <m.div
                 className="fixed inset-0 z-50 flex items-center justify-center px-4"
                 initial={{ opacity: 0, scale: 0.95, y: 12 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -229,13 +219,13 @@ export function DonateModal({ open, onOpenChange }: DonateModalProps) {
                         disabled={isSubmitting}
                       />
                     </div>
-                    <motion.div
+                    <m.div
                       className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600"
                       layout
                       transition={{ type: "spring", stiffness: 120, damping: 18 }}
                     >
                       {totalSummary}
-                    </motion.div>
+                    </m.div>
                     <button
                       type="submit"
                       className="flex w-full items-center justify-center rounded-full bg-[#ce1126] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-[#ce1126]/40 transition hover:bg-[#b20d1f] disabled:cursor-not-allowed disabled:opacity-60"
@@ -245,7 +235,7 @@ export function DonateModal({ open, onOpenChange }: DonateModalProps) {
                     </button>
                   </form>
                 </div>
-              </motion.div>
+              </m.div>
             </Dialog.Content>
           </Dialog.Portal>
         ) : null}

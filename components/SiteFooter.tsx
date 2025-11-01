@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 
 type SiteFooterProps = {
   onDonateClick?: () => void;
@@ -10,7 +10,7 @@ export function SiteFooter({ onDonateClick }: SiteFooterProps) {
   return (
     <footer className="mt-auto border-t border-black/10 bg-white/80 backdrop-blur-sm">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10 text-sm text-slate-600 md:flex-row md:items-center md:justify-between">
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 8 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.5 }}
@@ -20,10 +20,11 @@ export function SiteFooter({ onDonateClick }: SiteFooterProps) {
             Muslim Students Association · Palestine Relief Committee
           </p>
           <p className="mt-2 max-w-lg text-sm leading-relaxed text-slate-600">
-            Every contribution fuels critical aid deliveries, campus education, and direct support for families under occupation.
+            Every contribution fuels critical aid deliveries, campus education,
+            and direct support for families under occupation.
           </p>
-        </motion.div>
-        <motion.div
+        </m.div>
+        <m.div
           className="flex flex-col items-start gap-3 text-sm md:items-end"
           initial={{ opacity: 0, y: 8 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -41,7 +42,7 @@ export function SiteFooter({ onDonateClick }: SiteFooterProps) {
             <p>Contact · msa-pal@campus.edu</p>
             <p>© {new Date().getFullYear()} MSA Solidarity Network</p>
           </div>
-        </motion.div>
+        </m.div>
       </div>
     </footer>
   );
