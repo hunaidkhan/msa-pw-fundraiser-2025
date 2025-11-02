@@ -96,14 +96,14 @@ const TeamPage = ({ params }: TeamPageProps) => {
                 </span>
               </div>
               <div className="flex flex-col gap-3">
-                {/* Example embedding with a modal */}
-                {/* <DonateModal open={isOpen} onOpenChange={setOpen} defaultTeamId={team.id} /> */}
-                <Link
-                  href={`/donate?teamId=${team.id}`}
+                
+                <a
+                
+                  href={`/api/teams/${team.id}/donate?amount=50`} // you can change/remove amount
                   className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-emerald-500 via-white/90 to-red-500 px-6 py-3 text-base font-semibold text-black shadow-lg shadow-emerald-500/40 transition hover:scale-[1.02] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                 >
                   Donate to {team.name}
-                </Link>
+                </a>
               </div>
             </div>
           </div>

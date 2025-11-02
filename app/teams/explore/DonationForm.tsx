@@ -11,17 +11,21 @@ const formatter = new Intl.NumberFormat("en-US", {
 });
 
 type DonationFormProps = {
-  teams: Team[];
+  teams: Team[]; // Team must include: id, name, slug, description?
 };
 
 export const DonationForm = ({ teams }: DonationFormProps) => {
-  const [teamId, setTeamId] = useState<string>(teams[0]?.id ?? "");
+  // 🔁 Use SLUG as the identifier everywhere
+  const [teamSlug, setTeamSlug] = useState<string>(teams[0]?.slug ?? "");
   const [amount, setAmount] = useState<string>("50");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentLink, setPaymentLink] = useState<string | null>(null);
 
-  const selectedTeam = useMemo(() => teams.find((team) => team.id === teamId), [teams, teamId]);
+  const selectedTeam = useMemo(
+    () => teams.find((team) => team.slug === teamSlug),
+    [teams, teamSlug]
+  );
 
   const quickAmounts = [25, 50, 100, 250];
 
@@ -32,7 +36,6 @@ export const DonationForm = ({ teams }: DonationFormProps) => {
     setPaymentLink(null);
 
     const numericAmount = Number(amount);
-
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
       setLoading(false);
       setError("Enter a donation amount greater than zero.");
@@ -40,26 +43,17 @@ export const DonationForm = ({ teams }: DonationFormProps) => {
     }
 
     try {
-      const response = await fetch("/api/donations/create-link", {
+      // ✅ POST to slug-based API
+      const response = await fetch(`/api/teams/${teamSlug}/donate`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          amount: numericAmount,
-          teamId: teamId || undefined,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: numericAmount }),
       });
 
       const data = (await response.json()) as { url?: string; error?: string };
 
-      if (!response.ok) {
-        throw new Error(data.error ?? "Something went wrong while generating your link.");
-      }
-
-      if (!data.url) {
-        throw new Error("No payment link was returned. Try again.");
-      }
+      if (!response.ok) throw new Error(data.error ?? "Failed to generate payment link.");
+      if (!data.url) throw new Error("No payment link was returned. Try again.");
 
       setPaymentLink(data.url);
     } catch (err) {
@@ -77,12 +71,12 @@ export const DonationForm = ({ teams }: DonationFormProps) => {
         </label>
         <select
           id="team"
-          value={teamId}
-          onChange={(event) => setTeamId(event.target.value)}
+          value={teamSlug}
+          onChange={(event) => setTeamSlug(event.target.value)}
           className="w-full rounded-2xl border border-white/30 bg-black/30 px-4 py-3 text-sm text-white shadow-inner shadow-emerald-500/20 focus:outline-none focus:ring-2 focus:ring-emerald-300"
         >
           {teams.map((team) => (
-            <option key={team.id} value={team.id} className="text-zinc-900">
+            <option key={team.slug} value={team.slug} className="text-zinc-900">
               {team.name}
             </option>
           ))}
@@ -131,7 +125,9 @@ export const DonationForm = ({ teams }: DonationFormProps) => {
         <p className="mt-3 text-xs uppercase tracking-[0.35em] text-emerald-200/80">Transparency · Accountability · Solidarity</p>
       </div>
 
-      {error ? <p className="rounded-2xl border border-red-400/50 bg-red-500/10 px-4 py-3 text-sm text-red-100">{error}</p> : null}
+      {error ? (
+        <p className="rounded-2xl border border-red-400/50 bg-red-500/10 px-4 py-3 text-sm text-red-100">{error}</p>
+      ) : null}
 
       {paymentLink ? (
         <div className="space-y-3 rounded-3xl border border-emerald-300/50 bg-emerald-500/10 p-6 text-emerald-50">
