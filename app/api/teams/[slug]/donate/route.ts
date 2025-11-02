@@ -3,28 +3,24 @@ import { ApiError, Client, Environment } from "square";
 import crypto from "node:crypto";
 import { getTeamBySlug } from "@/config/teams";
 
-const SQUARE_ENV = (process.env.SQUARE_ENV ?? "").toLowerCase(); // "sandbox" | "production"
-const accessToken = process.env.SQUARE_ACCESS_TOKEN;
-const locationId  = process.env.SQUARE_LOCATION_ID;
-const CURRENCY    = process.env.SQUARE_CURRENCY ?? "CAD";
+const accessToken = process.env.SQUARE_ACCESS_TOKEN!;
+const locationId = process.env.SQUARE_LOCATION_ID!;
+const CURRENCY = process.env.SQUARE_CURRENCY ?? "CAD";
+const SQUARE_ENV = (process.env.SQUARE_ENV ?? "sandbox").toLowerCase();
 
-function squareEnv(): Environment {
-  if (SQUARE_ENV === "sandbox") return Environment.Sandbox;
-  if (SQUARE_ENV === "production") return Environment.Production;
-  // default sensibly based on NODE_ENV
-  return process.env.NODE_ENV === "production" ? Environment.Production : Environment.Sandbox;
-}
-
-const client = accessToken
-  ? new Client({ bearerAuthCredentials: { accessToken }, environment: squareEnv() })
-  : undefined;
+const client = new Client({
+  bearerAuthCredentials: { accessToken },
+  environment:
+    SQUARE_ENV === "production"
+      ? Environment.Production
+      : Environment.Sandbox,
+});
 
 export async function POST(req: Request, { params }: { params: { slug: string } }) {
   try {
-    // Lightweight config check (no secrets logged)
-    if (!client || !accessToken || !locationId) {
+    if (!accessToken || !locationId) {
       return NextResponse.json(
-        { error: "Square not configured: missing SQUARE_ACCESS_TOKEN or SQUARE_LOCATION_ID" },
+        { error: "Missing Square credentials" },
         { status: 500 }
       );
     }
@@ -32,15 +28,15 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
     const slug = params.slug;
     const team = getTeamBySlug(slug);
     if (!team) {
-      return NextResponse.json({ error: `Team not found for slug: ${slug}` }, { status: 404 });
+      return NextResponse.json({ error: `Team not found: ${slug}` }, { status: 404 });
     }
 
-    const { amount } = (await req.json()) as { amount?: number };
-    const numericAmount = Number(amount);
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-      return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
+    const { amount } = (await req.json()) as { amount: number };
+    if (!amount || amount <= 0) {
+      return NextResponse.json({ error: "Invalid donation amount" }, { status: 400 });
     }
-    const cents = Math.round(numericAmount * 100);
+
+    const cents = Math.round(amount * 100);
 
     const { result } = await client.checkoutApi.createPaymentLink({
       idempotencyKey: crypto.randomUUID(),
@@ -58,19 +54,24 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
 
     const url = result.paymentLink?.url ?? result.paymentLink?.longUrl;
     if (!url) {
-      return NextResponse.json({ error: "Square did not return a payment link" }, { status: 502 });
+      return NextResponse.json({ error: "Square did not return a link" }, { status: 502 });
     }
+
     return NextResponse.json({ url }, { status: 200 });
   } catch (err) {
     if (err instanceof ApiError) {
-      const e = err.result?.errors?.[0];
-      // 401 here means wrong env/keys/permissions
+      const first = err.result?.errors?.[0];
       return NextResponse.json(
-        { error: e?.detail ?? e?.code ?? "Square error", hint: err.statusCode === 401 ? "Check SQUARE_ENV, token and location id match (sandbox vs production)." : undefined },
+        {
+          error: first?.detail ?? first?.code ?? "Square error",
+          hint:
+            err.statusCode === 401
+              ? "Check your SQUARE_ENV and make sure your token/location ID are sandbox or production correctly."
+              : undefined,
+        },
         { status: err.statusCode ?? 500 }
       );
     }
-    const msg = err instanceof Error ? err.message : "Unexpected error";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
   }
 }
