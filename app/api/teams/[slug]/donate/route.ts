@@ -1,81 +1,88 @@
-// app/api/teams/[slug]/donate/route.ts
-import { NextResponse, NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { ApiError, Client, Environment } from "square";
 import crypto from "node:crypto";
 import { getTeamBySlug } from "@/config/teams";
 
-// ---- Env & Square client ----------------------------------------------------
+/** Pick Square env from deployment context (don’t rely on NODE_ENV on Vercel) */
+const isProd = process.env.VERCEL_ENV === "production";
+const accessToken = process.env.SQUARE_ACCESS_TOKEN;
+const locationId = process.env.SQUARE_LOCATION_ID;
+const CURRENCY = (process.env.SQUARE_CURRENCY || "CAD").toUpperCase();
 
-const accessToken = process.env.SQUARE_ACCESS_TOKEN!;
-const locationId = process.env.SQUARE_LOCATION_ID!;
-const CURRENCY = (process.env.SQUARE_CURRENCY ?? "CAD").toUpperCase();
-const SQUARE_ENV = (process.env.SQUARE_ENV ?? "sandbox").toLowerCase();
+function assertEnv() {
+  const missing: string[] = [];
+  if (!accessToken) missing.push("SQUARE_ACCESS_TOKEN");
+  if (!locationId) missing.push("SQUARE_LOCATION_ID");
+  if (CURRENCY !== "CAD") {
+    // You said CAD-only for now; gently enforce
+    throw new Error(`Only CAD is supported currently. Set SQUARE_CURRENCY=CAD (got ${CURRENCY}).`);
+  }
+  if (missing.length) {
+    throw new Error(`Missing required env var(s): ${missing.join(", ")}`);
+  }
+}
 
-const client = new Client({
-  bearerAuthCredentials: { accessToken },
-  environment: SQUARE_ENV === "production" ? Environment.Production : Environment.Sandbox,
-});
+function makeClient() {
+  return new Client({
+    bearerAuthCredentials: { accessToken: accessToken! },
+    environment: isProd ? Environment.Production : Environment.Sandbox,
+  });
+}
 
-// ---- Handler ----------------------------------------------------------------
-
-export async function POST(
-  req: NextRequest,
-  context: { params: Promise<{ slug: string }> } // <-- params is a Promise in Next 15+/16
-) {
+export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: string }> }) {
   try {
-    if (!accessToken || !locationId) {
-      return NextResponse.json({ error: "Missing Square credentials" }, { status: 500 });
-    }
+    assertEnv();
 
-    // MUST await the params promise
-    const { slug } = await context.params;
-
+    const { slug } = await ctx.params;
     const team = getTeamBySlug(slug);
     if (!team) {
-      return NextResponse.json({ error: `Team not found: ${slug}` }, { status: 404 });
+      return NextResponse.json({ error: `Team not found for slug: ${slug}` }, { status: 404 });
     }
 
-    const { amount } = (await req.json()) as { amount: number };
-    if (!amount || amount <= 0) {
-      return NextResponse.json({ error: "Invalid donation amount" }, { status: 400 });
+    const body = (await req.json()) as { amount?: number; currency?: string };
+    const amount = Number(body?.amount ?? 0);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return NextResponse.json({ error: "Please provide a positive donation amount." }, { status: 400 });
+    }
+    if ((body?.currency || "CAD").toUpperCase() !== "CAD") {
+      return NextResponse.json({ error: "Currency must be CAD." }, { status: 400 });
     }
 
     const cents = Math.round(amount * 100);
+    const client = makeClient();
+
+    // Build a deployment-aware redirect URL (works for previews & prod)
+    const origin = new URL(req.url).origin;
+    const redirectUrl = `${origin}/teams/${team.slug}?thankyou=1`;
 
     const { result } = await client.checkoutApi.createPaymentLink({
       idempotencyKey: crypto.randomUUID(),
       quickPay: {
         name: `Donate to ${team.name}`,
-        priceMoney: { amount: BigInt(cents), currency: CURRENCY as any },
-        locationId,
+        priceMoney: { amount: BigInt(cents), currency: "CAD" },
+        locationId: locationId!,
       },
       description: `Support ${team.name}'s fundraiser.`,
-      paymentNote: `team=${team.slug}; teamId=${team.id}`,
-      checkoutOptions: {
-        redirectUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/teams/${team.slug}?thankyou=1`,
-      },
+      paymentNote: `Team ${team.name} • slug ${team.slug}`,
+      checkoutOptions: { redirectUrl },
     });
 
     const url = result.paymentLink?.url ?? result.paymentLink?.longUrl;
     if (!url) {
-      return NextResponse.json({ error: "Square did not return a link" }, { status: 502 });
+      return NextResponse.json({ error: "Square did not return a payment link." }, { status: 502 });
     }
 
-    return NextResponse.json({ url }, { status: 200 });
+    return NextResponse.json({ url });
   } catch (err) {
     if (err instanceof ApiError) {
-      const first = err.result?.errors?.[0];
+      const e = err.result?.errors?.[0];
       return NextResponse.json(
-        {
-          error: first?.detail ?? first?.code ?? "Square error",
-          hint:
-            err.statusCode === 401
-              ? "Check SQUARE_ENV vs token/location (sandbox vs production)."
-              : undefined,
-        },
+        { error: e?.detail ?? e?.code ?? "Square request failed." },
         { status: err.statusCode ?? 500 }
       );
     }
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    const msg = err instanceof Error ? err.message : "Unexpected error.";
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
