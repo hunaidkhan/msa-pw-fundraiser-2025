@@ -1,31 +1,35 @@
-import { NextResponse } from "next/server";
+// app/api/teams/[slug]/donate/route.ts
+import { NextResponse, NextRequest } from "next/server";
 import { ApiError, Client, Environment } from "square";
 import crypto from "node:crypto";
 import { getTeamBySlug } from "@/config/teams";
 
+// ---- Env & Square client ----------------------------------------------------
+
 const accessToken = process.env.SQUARE_ACCESS_TOKEN!;
 const locationId = process.env.SQUARE_LOCATION_ID!;
-const CURRENCY = process.env.SQUARE_CURRENCY ?? "CAD";
+const CURRENCY = (process.env.SQUARE_CURRENCY ?? "CAD").toUpperCase();
 const SQUARE_ENV = (process.env.SQUARE_ENV ?? "sandbox").toLowerCase();
 
 const client = new Client({
   bearerAuthCredentials: { accessToken },
-  environment:
-    SQUARE_ENV === "production"
-      ? Environment.Production
-      : Environment.Sandbox,
+  environment: SQUARE_ENV === "production" ? Environment.Production : Environment.Sandbox,
 });
 
-export async function POST(req: Request, { params }: { params: { slug: string } }) {
+// ---- Handler ----------------------------------------------------------------
+
+export async function POST(
+  req: NextRequest,
+  context: { params: Promise<{ slug: string }> } // <-- params is a Promise in Next 15+/16
+) {
   try {
     if (!accessToken || !locationId) {
-      return NextResponse.json(
-        { error: "Missing Square credentials" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Missing Square credentials" }, { status: 500 });
     }
 
-    const slug = params.slug;
+    // MUST await the params promise
+    const { slug } = await context.params;
+
     const team = getTeamBySlug(slug);
     if (!team) {
       return NextResponse.json({ error: `Team not found: ${slug}` }, { status: 404 });
@@ -66,7 +70,7 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
           error: first?.detail ?? first?.code ?? "Square error",
           hint:
             err.statusCode === 401
-              ? "Check your SQUARE_ENV and make sure your token/location ID are sandbox or production correctly."
+              ? "Check SQUARE_ENV vs token/location (sandbox vs production)."
               : undefined,
         },
         { status: err.statusCode ?? 500 }
