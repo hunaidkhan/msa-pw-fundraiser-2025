@@ -71,15 +71,24 @@ function verifySquareSignature(bodyRaw: string, headerSig: string | null): boole
   }
 }
 
-// 🔐 Persist one donation as its own blob: donations/<paymentId>.json
-async function persistDonationToBlob(record: Donation) {
-  await put(`donations/${record.id}.json`, JSON.stringify(record, null, 2), {
-    access: "private",
-    contentType: "application/json",
-    addRandomSuffix: false,
-    allowOverwrite: true, // idempotent if Square retries
-    token: BLOB_TOKEN,    // omit if your project already has Blob integration connected
-  } as any);
+async function persistDonationToBlob(paymentId: string, teamRef: string, amountCents: number, createdAt: string) {
+  // one file per payment id → dedupe by filename
+  await put(`donations/${paymentId}.json`,
+    JSON.stringify({ paymentId, teamRef, amountCents, createdAt }),
+    {
+      access: "public",
+      contentType: "application/json",
+      addRandomSuffix: false,
+      allowOverwrite: false, // if exists => dedup
+    }
+  ).catch((err: unknown) => {
+    const msg = String((err as any)?.message ?? "");
+    if (msg.includes("already exists")) {
+      // already processed; safe to ignore
+      return;
+    }
+    throw err;
+  });
 }
 
 // (Optional) utility for later: read all donations back
@@ -155,7 +164,9 @@ export async function POST(req: Request) {
   };
 
   try {
-    await persistDonationToBlob(record);
+    const teamRef = parseTeamRef(payment.note); // you already have this
+    if (!teamRef) return NextResponse.json({ ok: true, skipped: "no teamRef" });
+    await persistDonationToBlob(payment.id, teamRef, amountCents, payment.createdAt ?? new Date().toISOString());
   } catch (e) {
     console.error("[Square Webhook] Failed to persist donation:", e);
     return NextResponse.json({ ok: false, error: "write failed" }, { status: 500 });

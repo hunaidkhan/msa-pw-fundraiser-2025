@@ -1,12 +1,13 @@
+// app/teams/[slug]/page.tsx
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTeamBySlug } from "@/config/teams";
 import { Suspense } from "react";
 import { DonateInline } from "./DonateInline";
+import { totalsByTeam } from "@/lib/donationsStore";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
 
 // To switch to root-level slugs (e.g., /team-falcon), move this file to app/[slug]/page.tsx and update links accordingly.
 
@@ -44,7 +45,17 @@ const TeamPage = async ({ params, searchParams }: TeamPageProps) => {
   if (!team) notFound();
 
   const goal = team.fundraisingGoal ?? 0;
-  const raised = team.fundraisingRaised ?? 0;
+
+  // Live raised (from webhook-backed store), fallback to 0 if anything goes wrong
+  let raisedCents = 0;
+  try {
+    const totals = await totalsByTeam();
+    raisedCents = totals[team.slug] ?? 0;
+  } catch {
+    raisedCents = 0;
+  }
+  const raised = Math.max(0, raisedCents) / 100;
+
   const progress = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
@@ -89,11 +100,15 @@ const TeamPage = async ({ params, searchParams }: TeamPageProps) => {
               <div className="grid gap-2">
                 <div className="flex items-baseline gap-3">
                   <p className="text-3xl font-bold">
-                    ${raised.toLocaleString()}
-                    <span className="ml-2 text-base font-medium text-slate-500">raised</span>
+                    $
+                    {raised.toLocaleString("en-CA", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                    <span className="ml-2 text-base font-medium text-slate-500">raised (CAD)</span>
                   </p>
                   <p className="text-sm text-slate-600">
-                    Goal: ${goal.toLocaleString()} · {progress}% to target
+                    Goal: ${goal.toLocaleString("en-CA")} · {progress}% to target
                   </p>
                 </div>
                 <div className="h-3 overflow-hidden rounded-full bg-slate-100">
@@ -106,7 +121,6 @@ const TeamPage = async ({ params, searchParams }: TeamPageProps) => {
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-inner">
-              {/* Replaced PCI blurb with campaign-appropriate copy */}
               <div className="space-y-2">
                 <h2 className="text-lg font-semibold">Your gift, your amount</h2>
                 <p className="text-sm text-slate-600">
