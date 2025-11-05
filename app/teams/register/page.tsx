@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import DonateModal from "@/components/DonateModal";
 import SiteFooter from "@/components/SiteFooter";
 import SiteHeader from "@/components/SiteHeader";
+import { waitForTeamAvailability } from "./waitForTeamAvailability";
 
 type FormState = {
   name: string;
@@ -27,6 +28,7 @@ export default function RegisterTeamPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isWaitingForTeam, setIsWaitingForTeam] = useState(false);
   const [isDonateOpen, setIsDonateOpen] = useState(false);
 
   function validate(): boolean {
@@ -65,7 +67,7 @@ export default function RegisterTeamPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (isSubmitting) {
+    if (isSubmitting || isWaitingForTeam) {
       return;
     }
 
@@ -75,6 +77,7 @@ export default function RegisterTeamPage() {
 
     setIsSubmitting(true);
     setSubmissionError(null);
+    setIsWaitingForTeam(false);
 
     try {
       const response = await fetch("/api/teams/register", {
@@ -102,10 +105,28 @@ export default function RegisterTeamPage() {
         return;
       }
 
+      let nextRoute: string | null = null;
       if (data?.redirect) {
-        router.push(data.redirect);
+        nextRoute = data.redirect;
       } else if (data?.slug) {
-        router.push(`/teams/${data.slug}`);
+        nextRoute = `/teams/${data.slug}`;
+      }
+
+      if (nextRoute) {
+        setIsWaitingForTeam(true);
+        const isTeamReady = await waitForTeamAvailability(nextRoute);
+        if (!isTeamReady) {
+          setIsWaitingForTeam(false);
+          setIsSubmitting(false);
+          setSubmissionError(
+            "Your team page is still publishing. Please try again in a few moments.",
+          );
+          return;
+        }
+
+        setIsWaitingForTeam(false);
+        router.push(nextRoute);
+        router.refresh();
       } else {
         router.push("/teams");
       }
@@ -114,6 +135,7 @@ export default function RegisterTeamPage() {
       setSubmissionError("Something went wrong. Please try again in a moment.");
     } finally {
       setIsSubmitting(false);
+      setIsWaitingForTeam(false);
     }
   }
 
@@ -156,7 +178,7 @@ export default function RegisterTeamPage() {
                   onInput={handleChange}
                   placeholder="e.g. Team Hope"
                   className={`w-full rounded-2xl border px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-[#007a3d] focus:outline-none focus:ring-4 focus:ring-[#007a3d]/20 ${errors.name ? "border-[#ce1126] focus:border-[#ce1126] focus:ring-[#ce1126]/20" : "border-slate-200 bg-white/80"}`}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isWaitingForTeam}
                   maxLength={80}
                   required
                 />
@@ -179,7 +201,7 @@ export default function RegisterTeamPage() {
                   onInput={handleChange}
                   placeholder="you@campus.edu"
                   className={`w-full rounded-2xl border px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-[#007a3d] focus:outline-none focus:ring-4 focus:ring-[#007a3d]/20 ${errors.email ? "border-[#ce1126] focus:border-[#ce1126] focus:ring-[#ce1126]/20" : "border-slate-200 bg-white/80"}`}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isWaitingForTeam}
                   required
                 />
                 {errors.email ? (
@@ -204,7 +226,7 @@ export default function RegisterTeamPage() {
                   onInput={handleChange}
                   placeholder="Optional"
                   className={`w-full rounded-2xl border px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-[#007a3d] focus:outline-none focus:ring-4 focus:ring-[#007a3d]/20 ${errors.goal ? "border-[#ce1126] focus:border-[#ce1126] focus:ring-[#ce1126]/20" : "border-slate-200 bg-white/80"}`}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isWaitingForTeam}
                 />
                 {errors.goal ? (
                   <p className="mt-2 text-sm font-medium text-[#ce1126]">{errors.goal}</p>
@@ -227,9 +249,13 @@ export default function RegisterTeamPage() {
               <button
                 type="submit"
                 className="inline-flex items-center justify-center rounded-full bg-[#007a3d] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#007a3d]/40 transition hover:bg-[#006633] disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isWaitingForTeam}
               >
-                {isSubmitting ? "Registering…" : "Create my team"}
+                {isWaitingForTeam
+                  ? "Publishing…"
+                  : isSubmitting
+                    ? "Registering…"
+                    : "Create my team"}
               </button>
             </div>
           </form>
