@@ -34,7 +34,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: stri
     assertEnv();
 
     const { slug } = await ctx.params;
-    const team = getTeamBySlug(slug);
+    const team = await getTeamBySlug(slug);
     if (!team) {
       return NextResponse.json({ error: `Team not found for slug: ${slug}` }, { status: 404 });
     }
