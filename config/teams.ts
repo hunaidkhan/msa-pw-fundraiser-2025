@@ -75,7 +75,7 @@ export async function loadDynamicTeams(): Promise<Team[]> {
       return fallbackTeams;
     }
 
-    const response = await fetch(blobs[0].url, {
+    const res = await fetch(blobs[0].url, {
       cache: "no-store",
       next: { revalidate: 0, tags: ["teams"] },
       headers: {
@@ -83,11 +83,11 @@ export async function loadDynamicTeams(): Promise<Team[]> {
         pragma: "no-cache",
       },
     });
-    if (!response.ok) {
+    if (!res.ok) {
       return fallbackTeams;
     }
 
-    const json = await response.json().catch(() => []);
+    const json = await res.json().catch(() => []);
     if (!Array.isArray(json)) {
       return fallbackTeams;
     }
@@ -162,7 +162,7 @@ export async function saveDynamicTeams(teams: Team[]): Promise<void> {
     addRandomSuffix: false,
     allowOverwrite: true,
     contentType: "application/json",
-    cacheControlMaxAge: 0,
+    cacheControlMaxAge: 0, // prevent edge caching
   });
   inMemoryDynamicTeams = teams;
 }
