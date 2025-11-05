@@ -1,3 +1,4 @@
+import { revalidatePath, revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { addTeam, TeamValidationError } from "@/config/teams";
@@ -35,6 +36,9 @@ export async function POST(request: Request) {
 
   try {
     const team = await addTeam({ name, email, goal });
+    revalidateTag("teams");
+    revalidatePath("/teams");
+    revalidatePath(`/teams/${team.slug}`);
     return NextResponse.json(
       { ok: true, slug: team.slug, redirect: `/teams/${team.slug}` },
       { status: 201 },

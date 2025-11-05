@@ -75,7 +75,14 @@ export async function loadDynamicTeams(): Promise<Team[]> {
       return fallbackTeams;
     }
 
-    const response = await fetch(blobs[0].url, { cache: "no-store" });
+    const response = await fetch(blobs[0].url, {
+      cache: "no-store",
+      next: { revalidate: 0, tags: ["teams"] },
+      headers: {
+        "cache-control": "no-cache",
+        pragma: "no-cache",
+      },
+    });
     if (!response.ok) {
       return fallbackTeams;
     }
@@ -155,6 +162,7 @@ export async function saveDynamicTeams(teams: Team[]): Promise<void> {
     addRandomSuffix: false,
     allowOverwrite: true,
     contentType: "application/json",
+    cacheControlMaxAge: 0,
   });
   inMemoryDynamicTeams = teams;
 }

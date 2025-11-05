@@ -104,10 +104,13 @@ export default function RegisterTeamPage() {
 
       if (data?.redirect) {
         router.push(data.redirect);
+        router.refresh();
       } else if (data?.slug) {
         router.push(`/teams/${data.slug}`);
+        router.refresh();
       } else {
         router.push("/teams");
+        router.refresh();
       }
     } catch (error) {
       console.error(error);
