@@ -136,6 +136,7 @@ export async function saveDynamicTeams(teams: Team[]): Promise<void> {
     addRandomSuffix: false,
     allowOverwrite:true,
     contentType: "application/json",
+    cacheControlMaxAge: 0
   });
 }
 
