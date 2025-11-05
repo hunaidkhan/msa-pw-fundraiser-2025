@@ -1,168 +1,152 @@
 // lib/donationsStore.ts
-import path from "node:path";
-import fs from "node:fs/promises";
 import { list, put } from "@vercel/blob";
 
-/** ─────────────────────────────────────────────────────────────────────────────
- * TYPES
- * ────────────────────────────────────────────────────────────────────────────*/
+/**
+ * Donation payload normalized from Square webhook.
+ * NOTE: Only non-PII fields are required (id, teamRef, amountCents, currency, createdAt).
+ * Keep email/receiptUrl optional; you can omit them upstream if not needed.
+ */
 export type Donation = {
-  id: string;              // Square payment id (unique)
-  teamRef: string | null;  // slug or id you attach to the payment
-  amountCents: number;     // minor units
+  id: string;               // Square payment id (used for idempotency)
+  teamRef: string | null;   // team slug or id (null allowed, but we won't tally it)
+  amountCents: number;      // integer minor units (e.g., 1234 = $12.34)
   currency: "USD" | "CAD" | string;
-  email?: string;          // not persisted in blob (avoid PII)
-  receiptUrl?: string;     // not persisted in blob (avoid PII)
-  createdAt: string;       // ISO
-  raw?: any;               // not persisted in blob (avoid PII)
+  email?: string;
+  receiptUrl?: string;
+  createdAt: string;        // ISO timestamp
+  raw?: unknown;            // optional debug payload in non-prod
 };
 
-type Store = {
-  donations: Donation[];
-  updatedAt: string;
-};
+// ---------- Blob layout ----------
 
-/** ─────────────────────────────────────────────────────────────────────────────
- * RUNTIME SWITCH
- * - Use Blob on Vercel (serverless) → one file per payment: donations/{id}.json
- * - Use filesystem locally (unchanged behavior)
- * ────────────────────────────────────────────────────────────────────────────*/
-const USING_BLOB = !!process.env.VERCEL; // heuristics: on Vercel use Blob
+const ROOT_PREFIX = "donations";
+const PAYMENTS_PREFIX = `${ROOT_PREFIX}/payments/`; // donations/payments/{paymentId}.json
+const TOTALS_PREFIX = `${ROOT_PREFIX}/totals/`;     // donations/totals/{teamRef}.json
 
-/** ─────────────────────────────────────────────────────────────────────────────
- * FILESYSTEM BACKEND (local dev)
- * ────────────────────────────────────────────────────────────────────────────*/
-function storePath() {
-  const custom = process.env.DONATIONS_PATH;
-  if (custom) return custom;
-  if (process.env.VERCEL) return "/tmp/donations.json"; // fallback (rarely used in prod)
-  return path.join(process.cwd(), "data", "donations.json");
-}
-async function ensureDir(p: string) {
-  await fs.mkdir(path.dirname(p), { recursive: true });
-}
+// Helper: derive the blob item array type from list()
+type BlobItem = Awaited<ReturnType<typeof list>>["blobs"][number];
 
-async function readStoreFS(): Promise<Store> {
-  const p = storePath();
+// ---------- Tiny utils ----------
+
+async function fetchJson<T = unknown>(url: string): Promise<T | null> {
   try {
-    const buf = await fs.readFile(p, "utf8");
-    return JSON.parse(buf) as Store;
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) return null;
+    return (await res.json()) as T;
   } catch {
-    return { donations: [], updatedAt: new Date().toISOString() };
+    return null;
   }
 }
-async function writeStoreFS(next: Store): Promise<void> {
-  const p = storePath();
-  await ensureDir(p);
-  const tmp = p + ".tmp";
-  await fs.writeFile(tmp, JSON.stringify(next, null, 2), "utf8");
-  await fs.rename(tmp, p);
+
+/**
+ * List all blobs for a prefix (handles pagination).
+ * Returns an array of blob items; you can read each via its public `url`.
+ */
+async function listAll(prefix: string): Promise<BlobItem[]> {
+  const items: BlobItem[] = [];
+  let cursor: string | undefined = undefined;
+
+  do {
+    const page = await list({ prefix, cursor });
+    if (page.blobs?.length) items.push(...page.blobs);
+    cursor = page.cursor ?? undefined;
+  } while (cursor);
+
+  return items;
 }
-async function upsertDonationFS(d: Donation): Promise<void> {
-  const store = await readStoreFS();
-  const idx = store.donations.findIndex((x) => x.id === d.id);
-  if (idx >= 0) store.donations[idx] = d;
-  else store.donations.push(d);
-  store.updatedAt = new Date().toISOString();
-  await writeStoreFS(store);
+
+/**
+ * Fetch a single blob (by exact pathname) if it exists.
+ * Since the Blob API is path-based, we "find" it by listing its exact prefix.
+ */
+async function getBlobByPath(pathname: string): Promise<BlobItem | null> {
+  const page = await list({ prefix: pathname, limit: 1 });
+  return page.blobs?.[0] ?? null;
 }
-async function totalsByTeamFS(): Promise<Record<string, number>> {
-  const store = await readStoreFS();
-  const totals: Record<string, number> = {};
-  for (const d of store.donations) {
-    const key = d.teamRef ?? "unknown";
-    totals[key] = (totals[key] ?? 0) + d.amountCents;
+
+// ---------- Public API ----------
+
+/**
+ * Idempotently store a payment record and update the team's total.
+ * - Writes donations/payments/{paymentId}.json (allowOverwrite: true, for webhook retries)
+ * - If teamRef exists, increments donations/totals/{teamRef}.json
+ */
+export async function upsertDonation(d: Donation): Promise<void> {
+  // 1) Persist the payment blob (idempotent / retry-safe)
+  const paymentPath = `${PAYMENTS_PREFIX}${d.id}.json`;
+  await put(paymentPath, JSON.stringify(d, null, 2), {
+    access: "public",
+    addRandomSuffix: false,
+    allowOverwrite: true, // retry-safe
+    contentType: "application/json",
+  });
+
+  // 2) Update per-team total (only if we have a teamRef)
+  if (!d.teamRef) return;
+
+  const totalsPath = `${TOTALS_PREFIX}${d.teamRef}.json`;
+
+  // Read current total if exists
+  let currentTotal = 0;
+  const existing = await getBlobByPath(totalsPath);
+  if (existing) {
+    const json = await fetchJson<{ team: string; totalCents: number }>(existing.url);
+    if (json && Number.isFinite(json.totalCents)) {
+      currentTotal = json.totalCents;
+    }
   }
-  return totals;
-}
 
-/** ─────────────────────────────────────────────────────────────────────────────
- * BLOB BACKEND (production)
- * - Dedup via filename: donations/{paymentId}.json
- * - Only store minimal fields: { id, teamRef, amountCents, createdAt }
- * - No PII persisted in blob
- * ────────────────────────────────────────────────────────────────────────────*/
-type BlobDonation = {
-  id: string;
-  teamRef: string | null;
-  amountCents: number;
-  createdAt: string;
-};
-
-const BLOB_PREFIX = "donations/";
-
-async function upsertDonationBlob(d: Donation): Promise<void> {
-  const filename = `${BLOB_PREFIX}${d.id}.json`;
-  const minimal: BlobDonation = {
-    id: d.id,
-    teamRef: d.teamRef,
-    amountCents: d.amountCents,
-    createdAt: d.createdAt,
+  const next = {
+    team: d.teamRef,
+    totalCents: currentTotal + d.amountCents,
+    updatedAt: new Date().toISOString(),
   };
 
-  // Dedup: do not overwrite if file exists already
-  await put(filename, JSON.stringify(minimal), {
+  await put(totalsPath, JSON.stringify(next, null, 2), {
     access: "public",
-    contentType: "application/json",
     addRandomSuffix: false,
-    allowOverwrite: false,
-  }).catch((err: unknown) => {
-    const msg = String((err as any)?.message ?? "");
-    if (msg.includes("already exists")) return; // idempotent
-    throw err;
+    allowOverwrite: true,
+    contentType: "application/json",
   });
 }
 
 /**
- * Iterate all donations/ blobs and sum by team
- * For high volumes, you can later cache results for ~30s via unstable_cache.
+ * Get the aggregate totals for ALL teams as a Record<teamRef, totalCents>.
+ * Reads donations/totals/*.json and combines them.
  */
-async function totalsByTeamBlob(): Promise<Record<string, number>> {
-  const totals: Record<string, number> = {};
-  let cursor: string | undefined = undefined;
-
-  do {
-    const page = await list({ prefix: BLOB_PREFIX, cursor });
-    cursor = page.cursor;
-
-    const jsonBlobs = page.blobs.filter((b) => b.pathname.endsWith(".json"));
-    const records = await Promise.all(
-      jsonBlobs.map(async (b) => {
-        const res = await fetch(b.url, { cache: "no-store" });
-        if (!res.ok) return null;
-        try {
-          return (await res.json()) as BlobDonation;
-        } catch {
-          return null;
-        }
-      })
-    );
-
-    for (const r of records) {
-      if (!r) continue;
-      const key = r.teamRef ?? "unknown";
-      totals[key] = (totals[key] ?? 0) + (Number.isFinite(r.amountCents) ? r.amountCents : 0);
-    }
-  } while (cursor);
-
-  return totals;
-}
-
-/** ─────────────────────────────────────────────────────────────────────────────
- * PUBLIC API (stable)
- * ────────────────────────────────────────────────────────────────────────────*/
-export async function upsertDonation(d: Donation): Promise<void> {
-  if (USING_BLOB) return upsertDonationBlob(d);
-  return upsertDonationFS(d);
-}
-
 export async function totalsByTeam(): Promise<Record<string, number>> {
-  if (USING_BLOB) return totalsByTeamBlob();
-  return totalsByTeamFS();
+  const blobs = await listAll(TOTALS_PREFIX);
+  const out: Record<string, number> = {};
+
+  // Only pick *.json under totals/
+  const jsons = blobs.filter((b) => b.pathname.startsWith(TOTALS_PREFIX) && b.pathname.endsWith(".json"));
+
+  for (const b of jsons) {
+    const json = await fetchJson<{ team: string; totalCents: number }>(b.url);
+    if (!json) continue;
+
+    const team = json.team;
+    const total = Number(json.totalCents ?? 0);
+    if (!team) continue;
+
+    out[team] = total;
+  }
+
+  return out;
 }
 
-/** Optional helper if you want just a single team’s total quickly */
-export async function totalForTeamCents(teamRef: string): Promise<number> {
-  const totals = await totalsByTeam();
-  return totals[teamRef] ?? 0;
+/**
+ * Get a single team's total in cents.
+ * Returns 0 if the totals file doesn't exist yet.
+ */
+export async function totalForTeam(teamRef: string): Promise<number> {
+  const totalsPath = `${TOTALS_PREFIX}${teamRef}.json`;
+  const blob = await getBlobByPath(totalsPath);
+  if (!blob) return 0;
+
+  const json = await fetchJson<{ totalCents: number }>(blob.url);
+  if (!json) return 0;
+
+  const n = Number(json.totalCents ?? 0);
+  return Number.isFinite(n) ? n : 0;
 }
