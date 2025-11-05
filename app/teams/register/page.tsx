@@ -118,7 +118,7 @@ export default function RegisterTeamPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-emerald-50 via-white to-rose-50">
+    <div className="flex min-h-screen flex-col bg-gradient-to-br from-emerald-50 via-white to-rose-50 font-sans">
       <SiteHeader onDonateClick={() => setIsDonateOpen(true)} />
 
       <main className="relative flex flex-1 items-center justify-center px-6 py-16">
@@ -155,7 +155,7 @@ export default function RegisterTeamPage() {
                   value={form.name}
                   onInput={handleChange}
                   placeholder="e.g. Team Hope"
-                  className={`w-full rounded-2xl border px-4 py-3 text-base shadow-sm transition focus:border-[#007a3d] focus:outline-none focus:ring-4 focus:ring-[#007a3d]/20 ${errors.name ? "border-[#ce1126] focus:border-[#ce1126] focus:ring-[#ce1126]/20" : "border-slate-200 bg-white/80"}`}
+                  className={`w-full rounded-2xl border px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-[#007a3d] focus:outline-none focus:ring-4 focus:ring-[#007a3d]/20 ${errors.name ? "border-[#ce1126] focus:border-[#ce1126] focus:ring-[#ce1126]/20" : "border-slate-200 bg-white/80"}`}
                   disabled={isSubmitting}
                   maxLength={80}
                   required
@@ -178,7 +178,7 @@ export default function RegisterTeamPage() {
                   value={form.email}
                   onInput={handleChange}
                   placeholder="you@campus.edu"
-                  className={`w-full rounded-2xl border px-4 py-3 text-base shadow-sm transition focus:border-[#007a3d] focus:outline-none focus:ring-4 focus:ring-[#007a3d]/20 ${errors.email ? "border-[#ce1126] focus:border-[#ce1126] focus:ring-[#ce1126]/20" : "border-slate-200 bg-white/80"}`}
+                  className={`w-full rounded-2xl border px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-[#007a3d] focus:outline-none focus:ring-4 focus:ring-[#007a3d]/20 ${errors.email ? "border-[#ce1126] focus:border-[#ce1126] focus:ring-[#ce1126]/20" : "border-slate-200 bg-white/80"}`}
                   disabled={isSubmitting}
                   required
                 />
@@ -203,7 +203,7 @@ export default function RegisterTeamPage() {
                   value={form.goal}
                   onInput={handleChange}
                   placeholder="Optional"
-                  className={`w-full rounded-2xl border px-4 py-3 text-base shadow-sm transition focus:border-[#007a3d] focus:outline-none focus:ring-4 focus:ring-[#007a3d]/20 ${errors.goal ? "border-[#ce1126] focus:border-[#ce1126] focus:ring-[#ce1126]/20" : "border-slate-200 bg-white/80"}`}
+                  className={`w-full rounded-2xl border px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-[#007a3d] focus:outline-none focus:ring-4 focus:ring-[#007a3d]/20 ${errors.goal ? "border-[#ce1126] focus:border-[#ce1126] focus:ring-[#ce1126]/20" : "border-slate-200 bg-white/80"}`}
                   disabled={isSubmitting}
                 />
                 {errors.goal ? (
