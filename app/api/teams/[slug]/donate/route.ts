@@ -3,7 +3,7 @@ import { ApiError, Client, Environment } from "square";
 import crypto from "node:crypto";
 import { getTeamBySlug } from "@/config/teams";
 
-/** Pick Square env from deployment context (don’t rely on NODE_ENV on Vercel) */
+/** Pick Square env from deployment context (don't rely on NODE_ENV on Vercel) */
 const isProd = process.env.VERCEL_ENV === "production";
 const accessToken = process.env.SQUARE_ACCESS_TOKEN;
 const locationId = process.env.SQUARE_LOCATION_ID;
@@ -13,12 +13,14 @@ function assertEnv() {
   const missing: string[] = [];
   if (!accessToken) missing.push("SQUARE_ACCESS_TOKEN");
   if (!locationId) missing.push("SQUARE_LOCATION_ID");
-  if (CURRENCY !== "CAD") {
-    // You said CAD-only for now; gently enforce
-    throw new Error(`Only CAD is supported currently. Set SQUARE_CURRENCY=CAD (got ${CURRENCY}).`);
-  }
+  
   if (missing.length) {
+    console.error("[Donate Route] Missing environment variables:", missing);
     throw new Error(`Missing required env var(s): ${missing.join(", ")}`);
+  }
+  
+  if (CURRENCY !== "CAD") {
+    throw new Error(`Only CAD is supported currently. Set SQUARE_CURRENCY=CAD (got ${CURRENCY}).`);
   }
 }
 
@@ -30,17 +32,26 @@ function makeClient() {
 }
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: string }> }) {
+  console.log("[Donate Route] Request received");
+  
   try {
+    // Check env vars first
     assertEnv();
+    console.log("[Donate Route] Environment variables validated");
 
     const { slug } = await ctx.params;
+    console.log("[Donate Route] Team slug:", slug);
+    
     const team = await getTeamBySlug(slug);
     if (!team) {
+      console.error("[Donate Route] Team not found:", slug);
       return NextResponse.json({ error: `Team not found for slug: ${slug}` }, { status: 404 });
     }
+    console.log("[Donate Route] Team found:", team.name);
 
     const body = (await req.json()) as { amount?: number; currency?: string };
     const amount = Number(body?.amount ?? 0);
+    console.log("[Donate Route] Amount:", amount);
 
     if (!Number.isFinite(amount) || amount <= 0) {
       return NextResponse.json({ error: "Please provide a positive donation amount." }, { status: 400 });
@@ -56,6 +67,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: stri
     const origin = new URL(req.url).origin;
     const redirectUrl = `${origin}/teams/${team.slug}?thankyou=1`;
 
+    console.log("[Donate Route] Creating payment link for", cents, "cents");
+
     const { result } = await client.checkoutApi.createPaymentLink({
       idempotencyKey: crypto.randomUUID(),
       quickPay: {
@@ -70,19 +83,33 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: stri
 
     const url = result.paymentLink?.url ?? result.paymentLink?.longUrl;
     if (!url) {
+      console.error("[Donate Route] Square did not return a payment link");
       return NextResponse.json({ error: "Square did not return a payment link." }, { status: 502 });
     }
 
+    console.log("[Donate Route] Payment link created successfully");
     return NextResponse.json({ url });
+    
   } catch (err) {
+    console.error("[Donate Route] Error occurred:", err);
+    
     if (err instanceof ApiError) {
       const e = err.result?.errors?.[0];
+      console.error("[Donate Route] Square API Error:", {
+        statusCode: err.statusCode,
+        category: e?.category,
+        code: e?.code,
+        detail: e?.detail,
+      });
+      
       return NextResponse.json(
         { error: e?.detail ?? e?.code ?? "Square request failed." },
         { status: err.statusCode ?? 500 }
       );
     }
+    
     const msg = err instanceof Error ? err.message : "Unexpected error.";
+    console.error("[Donate Route] Unexpected error:", msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
