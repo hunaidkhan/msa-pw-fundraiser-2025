@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const team = addTeam({ name, email, goal });
+    const team = await addTeam({ name, email, goal });
     return NextResponse.json(
       { ok: true, slug: team.slug, redirect: `/teams/${team.slug}` },
       { status: 201 },

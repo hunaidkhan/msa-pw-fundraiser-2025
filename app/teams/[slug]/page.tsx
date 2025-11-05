@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getAllTeams, getTeamBySlug } from "@/config/teams";
+import { getTeamBySlug } from "@/config/teams";
 import { Suspense } from "react";
 import { DonateInline } from "./DonateInline";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 // To switch to root-level slugs (e.g., /team-falcon), move this file to app/[slug]/page.tsx and update links accordingly.
 
@@ -13,12 +16,9 @@ type TeamPageProps = {
     | Promise<Record<string, string | string[] | undefined>>;
 };
 
-export const generateStaticParams = () =>
-  getAllTeams().map((team) => ({ slug: team.slug }));
-
 export const generateMetadata = async ({ params }: TeamPageProps): Promise<Metadata> => {
   const { slug } = await params;
-  const team = getTeamBySlug(slug);
+  const team = await getTeamBySlug(slug);
 
   if (!team) {
     return { title: "Team not found | Palestine Solidarity Fundraiser" };
@@ -39,7 +39,7 @@ export const generateMetadata = async ({ params }: TeamPageProps): Promise<Metad
 
 const TeamPage = async ({ params, searchParams }: TeamPageProps) => {
   const { slug } = await params;
-  const team = getTeamBySlug(slug);
+  const team = await getTeamBySlug(slug);
   if (!team) notFound();
 
   const goal = team.fundraisingGoal ?? 0;

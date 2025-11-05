@@ -3,14 +3,17 @@ import Link from "next/link";
 import { DonationForm } from "@/app/teams/explore/DonationForm";
 import { getAllTeams } from "@/config/teams";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export const metadata: Metadata = {
   title: "Explore Teams & Donate | Palestine Solidarity Fundraiser",
   description:
     "Choose a team, set your gift amount, and generate a secure Square payment link to support Palestinian liberation.",
 };
 
-const ExploreTeamsPage = () => {
-  const teams = getAllTeams();
+const ExploreTeamsPage = async () => {
+  const teams = await getAllTeams();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-700 via-black to-red-700/80 py-20 text-white">

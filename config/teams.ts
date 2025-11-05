@@ -1,5 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import path from "path";
+import { list, put } from "@vercel/blob";
 
 export type Team = {
   id: string;
@@ -62,33 +61,26 @@ const BASE_TEAMS: Team[] = [
   },
 ];
 
-const TEAMS_DB_PATH =
-  process.env.TEAMS_DB_PATH ?? path.join(process.cwd(), "data", "teams.dynamic.json");
+const FILE_NAME = "teams.json"; // deterministic blob key
 
-export function ensureDirExists(filePath: string): void {
-  const directory = path.dirname(filePath);
-  if (!existsSync(directory)) {
-    mkdirSync(directory, { recursive: true });
-  }
-}
-
-export function loadDynamicTeams(): Team[] {
-  if (!existsSync(TEAMS_DB_PATH)) {
-    return [];
-  }
-
+export async function loadDynamicTeams(): Promise<Team[]> {
   try {
-    const raw = readFileSync(TEAMS_DB_PATH, "utf8");
-    if (!raw.trim()) {
+    const { blobs } = await list({ prefix: FILE_NAME, limit: 1 });
+    if (!blobs.length) {
       return [];
     }
 
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) {
+    const response = await fetch(blobs[0].url, { cache: "no-store" });
+    if (!response.ok) {
       return [];
     }
 
-    return parsed
+    const json = await response.json().catch(() => []);
+    if (!Array.isArray(json)) {
+      return [];
+    }
+
+    return json
       .map((entry) => sanitizeTeam(entry))
       .filter((team): team is Team => Boolean(team));
   } catch (error) {
@@ -138,10 +130,12 @@ function sanitizeTeam(value: unknown): Team | undefined {
   return team;
 }
 
-export function saveDynamicTeams(teams: Team[]): void {
-  ensureDirExists(TEAMS_DB_PATH);
-  const payload = JSON.stringify(teams, null, 2);
-  writeFileSync(TEAMS_DB_PATH, `${payload}\n`, "utf8");
+export async function saveDynamicTeams(teams: Team[]): Promise<void> {
+  await put(FILE_NAME, JSON.stringify(teams, null, 2), {
+    access: "private",
+    addRandomSuffix: false,
+    contentType: "application/json",
+  });
 }
 
 export function slugify(value: string): string {
@@ -183,8 +177,8 @@ export function teamNameExists(name: string, teams: Team[]): boolean {
   return teams.some((team) => team.name.trim().toLowerCase() === target);
 }
 
-export function getAllTeams(): Team[] {
-  const dynamicTeams = loadDynamicTeams();
+export async function getAllTeams(): Promise<Team[]> {
+  const dynamicTeams = await loadDynamicTeams();
   const merged = new Map<string, Team>();
 
   for (const team of BASE_TEAMS) {
@@ -200,15 +194,17 @@ export function getAllTeams(): Team[] {
   return Array.from(merged.values());
 }
 
-export function getTeamBySlug(slug: string): Team | undefined {
-  return getAllTeams().find((team) => team.slug === slug);
+export async function getTeamBySlug(slug: string): Promise<Team | undefined> {
+  const allTeams = await getAllTeams();
+  return allTeams.find((team) => team.slug === slug);
 }
 
-export function getTeamById(id: string): Team | undefined {
-  return getAllTeams().find((team) => team.id === id);
+export async function getTeamById(id: string): Promise<Team | undefined> {
+  const allTeams = await getAllTeams();
+  return allTeams.find((team) => team.id === id);
 }
 
-export function addTeam(input: AddTeamInput): Team {
+export async function addTeam(input: AddTeamInput): Promise<Team> {
   const name = typeof input.name === "string" ? input.name.trim() : "";
   if (!name) {
     throw new TeamValidationError("Team name is required.");
@@ -233,7 +229,7 @@ export function addTeam(input: AddTeamInput): Team {
     goal = input.goal;
   }
 
-  const existingTeams = getAllTeams();
+  const existingTeams = await getAllTeams();
   if (teamNameExists(name, existingTeams)) {
     throw new TeamValidationError("A team with this name already exists.");
   }
@@ -253,9 +249,9 @@ export function addTeam(input: AddTeamInput): Team {
     contactEmail: email,
   };
 
-  const dynamicTeams = loadDynamicTeams();
+  const dynamicTeams = await loadDynamicTeams();
   dynamicTeams.push(newTeam);
-  saveDynamicTeams(dynamicTeams);
+  await saveDynamicTeams(dynamicTeams);
 
   return newTeam;
 }
