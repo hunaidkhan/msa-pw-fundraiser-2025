@@ -64,30 +64,47 @@ const BASE_TEAMS: Team[] = [
 
 const FILE_NAME = "teams.json"; // deterministic blob key
 
+let inMemoryDynamicTeams: Team[] = [];
+
 export async function loadDynamicTeams(): Promise<Team[]> {
   noStore();
+  const fallbackTeams = inMemoryDynamicTeams;
   try {
     const { blobs } = await list({ prefix: FILE_NAME, limit: 1 });
     if (!blobs.length) {
-      return [];
+      return fallbackTeams;
     }
 
     const response = await fetch(blobs[0].url, { cache: "no-store" });
     if (!response.ok) {
-      return [];
+      return fallbackTeams;
     }
 
     const json = await response.json().catch(() => []);
     if (!Array.isArray(json)) {
-      return [];
+      return fallbackTeams;
     }
 
-    return json
+    const parsedTeams = json
       .map((entry) => sanitizeTeam(entry))
       .filter((team): team is Team => Boolean(team));
+
+    const mergedBySlug = new Map<string, Team>();
+    for (const team of parsedTeams) {
+      mergedBySlug.set(team.slug, team);
+    }
+    for (const team of fallbackTeams) {
+      if (!mergedBySlug.has(team.slug)) {
+        mergedBySlug.set(team.slug, team);
+      }
+    }
+
+    const mergedTeams = Array.from(mergedBySlug.values());
+    inMemoryDynamicTeams = mergedTeams;
+    return mergedTeams;
   } catch (error) {
     console.error("Failed to load dynamic teams", error);
-    return [];
+    return fallbackTeams;
   }
 }
 
@@ -139,6 +156,7 @@ export async function saveDynamicTeams(teams: Team[]): Promise<void> {
     allowOverwrite: true,
     contentType: "application/json",
   });
+  inMemoryDynamicTeams = teams;
 }
 
 export function slugify(value: string): string {
