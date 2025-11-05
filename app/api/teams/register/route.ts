@@ -36,10 +36,10 @@ export async function POST(request: Request) {
 
   try {
     const team = await addTeam({ name, email, goal });
-    // @ts-expect-error Next.js 16 currently types revalidateTag with a required options bag
-    revalidateTag("teams");
-    revalidatePath("/teams");
-    revalidatePath(`/teams/${team.slug}`);
+
+    await Promise.resolve(revalidateTag("teams", "max"));
+    await Promise.resolve(revalidatePath("/teams"));
+    await Promise.resolve(revalidatePath(`/teams/${team.slug}`));
     return NextResponse.json(
       { ok: true, slug: team.slug, redirect: `/teams/${team.slug}` },
       { status: 201 },

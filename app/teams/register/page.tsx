@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import DonateModal from "@/components/DonateModal";
 import SiteFooter from "@/components/SiteFooter";
 import SiteHeader from "@/components/SiteHeader";
+import { waitForTeamAvailability } from "./waitForTeamAvailability";
 
 type FormState = {
   name: string;
@@ -27,9 +28,8 @@ export default function RegisterTeamPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDonateOpen, setIsDonateOpen] = useState(false);
   const [isWaitingForTeam, setIsWaitingForTeam] = useState(false);
-  const [pendingTeamSlug, setPendingTeamSlug] = useState<string | null>(null);
+  const [isDonateOpen, setIsDonateOpen] = useState(false);
 
   function validate(): boolean {
     const nextErrors: FormErrors = {};
@@ -65,41 +65,9 @@ export default function RegisterTeamPage() {
     setSubmissionError(null);
   }
 
-  async function waitForTeamAvailability(path: string, slug?: string | null): Promise<boolean> {
-    setIsWaitingForTeam(true);
-    setPendingTeamSlug(slug ?? null);
-
-    const timeoutMs = 45000;
-    const pollIntervalMs = 400;
-    const startedAt = Date.now();
-
-    while (Date.now() - startedAt < timeoutMs) {
-      try {
-        const response = await fetch(path, {
-          method: "GET",
-          cache: "no-store",
-          headers: {
-            "cache-control": "no-cache",
-            pragma: "no-cache",
-          },
-        });
-
-        if (response.ok) {
-          return true;
-        }
-      } catch (error) {
-        console.warn("Team page availability check failed", error);
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
-    }
-
-    return false;
-  }
-
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (isSubmitting) {
+    if (isSubmitting || isWaitingForTeam) {
       return;
     }
 
@@ -109,9 +77,7 @@ export default function RegisterTeamPage() {
 
     setIsSubmitting(true);
     setSubmissionError(null);
-
-    let shouldResetSubmitting = true;
-    let shouldClearWaitingState = false;
+    setIsWaitingForTeam(false);
 
     try {
       const response = await fetch("/api/teams/register", {
@@ -139,36 +105,37 @@ export default function RegisterTeamPage() {
         return;
       }
 
-      const redirectPath = data?.redirect
-        ? data.redirect
-        : data?.slug
-          ? `/teams/${data.slug}`
-          : "/teams";
+      let nextRoute: string | null = null;
+      if (data?.redirect) {
+        nextRoute = data.redirect;
+      } else if (data?.slug) {
+        nextRoute = `/teams/${data.slug}`;
+      }
 
-      const slugFromResponse = data?.slug
-        ?? (redirectPath.startsWith("/teams/")
-          ? redirectPath.replace(/^\/teams\//, "").replace(/\/$/, "") || null
-          : null);
+      if (nextRoute) {
+        setIsWaitingForTeam(true);
+        const isTeamReady = await waitForTeamAvailability(nextRoute);
+        if (!isTeamReady) {
+          setIsWaitingForTeam(false);
+          setIsSubmitting(false);
+          setSubmissionError(
+            "Your team page is still publishing. Please try again in a few moments.",
+          );
+          return;
+        }
 
-      shouldClearWaitingState = true;
-      await waitForTeamAvailability(redirectPath, slugFromResponse);
-
-      router.push(redirectPath);
-      router.refresh();
-      shouldResetSubmitting = false;
-      shouldClearWaitingState = false;
-      return;
+        setIsWaitingForTeam(false);
+        router.push(nextRoute);
+        router.refresh();
+      } else {
+        router.push("/teams");
+      }
     } catch (error) {
       console.error(error);
       setSubmissionError("Something went wrong. Please try again in a moment.");
     } finally {
-      if (shouldResetSubmitting) {
-        setIsSubmitting(false);
-      }
-      if (shouldClearWaitingState) {
-        setIsWaitingForTeam(false);
-        setPendingTeamSlug(null);
-      }
+      setIsSubmitting(false);
+      setIsWaitingForTeam(false);
     }
   }
 
@@ -211,7 +178,7 @@ export default function RegisterTeamPage() {
                   onInput={handleChange}
                   placeholder="e.g. Team Hope"
                   className={`w-full rounded-2xl border px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-[#007a3d] focus:outline-none focus:ring-4 focus:ring-[#007a3d]/20 ${errors.name ? "border-[#ce1126] focus:border-[#ce1126] focus:ring-[#ce1126]/20" : "border-slate-200 bg-white/80"}`}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isWaitingForTeam}
                   maxLength={80}
                   required
                 />
@@ -234,7 +201,7 @@ export default function RegisterTeamPage() {
                   onInput={handleChange}
                   placeholder="you@campus.edu"
                   className={`w-full rounded-2xl border px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-[#007a3d] focus:outline-none focus:ring-4 focus:ring-[#007a3d]/20 ${errors.email ? "border-[#ce1126] focus:border-[#ce1126] focus:ring-[#ce1126]/20" : "border-slate-200 bg-white/80"}`}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isWaitingForTeam}
                   required
                 />
                 {errors.email ? (
@@ -259,7 +226,7 @@ export default function RegisterTeamPage() {
                   onInput={handleChange}
                   placeholder="Optional"
                   className={`w-full rounded-2xl border px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-[#007a3d] focus:outline-none focus:ring-4 focus:ring-[#007a3d]/20 ${errors.goal ? "border-[#ce1126] focus:border-[#ce1126] focus:ring-[#ce1126]/20" : "border-slate-200 bg-white/80"}`}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isWaitingForTeam}
                 />
                 {errors.goal ? (
                   <p className="mt-2 text-sm font-medium text-[#ce1126]">{errors.goal}</p>
@@ -282,9 +249,13 @@ export default function RegisterTeamPage() {
               <button
                 type="submit"
                 className="inline-flex items-center justify-center rounded-full bg-[#007a3d] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#007a3d]/40 transition hover:bg-[#006633] disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isWaitingForTeam}
               >
-                {isSubmitting ? "Registering…" : "Create my team"}
+                {isWaitingForTeam
+                  ? "Publishing…"
+                  : isSubmitting
+                    ? "Registering…"
+                    : "Create my team"}
               </button>
             </div>
           </form>
@@ -293,18 +264,6 @@ export default function RegisterTeamPage() {
 
       <SiteFooter onDonateClick={() => setIsDonateOpen(true)} />
       <DonateModal open={isDonateOpen} onOpenChange={setIsDonateOpen} />
-
-      {isWaitingForTeam ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 backdrop-blur-sm">
-          <div className="w-full max-w-xs rounded-3xl bg-white/95 p-6 text-center shadow-2xl">
-            <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-2 border-transparent border-l-[#007a3d] border-t-[#007a3d]" />
-            <p className="text-sm font-semibold text-slate-900">
-              {pendingTeamSlug ? `Publishing /teams/${pendingTeamSlug}…` : "Publishing your team page…"}
-            </p>
-            <p className="mt-2 text-xs text-slate-600">Hang tight—we’ll redirect you as soon as it’s live.</p>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

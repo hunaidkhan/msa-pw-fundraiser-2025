@@ -1,5 +1,4 @@
 import { list, put } from "@vercel/blob";
-import { unstable_noStore as noStore } from "next/cache";
 
 export type Team = {
   id: string;
@@ -64,54 +63,29 @@ const BASE_TEAMS: Team[] = [
 
 const FILE_NAME = "teams.json"; // deterministic blob key
 
-let inMemoryDynamicTeams: Team[] = [];
-
 export async function loadDynamicTeams(): Promise<Team[]> {
-  noStore();
-  const fallbackTeams = inMemoryDynamicTeams;
   try {
     const { blobs } = await list({ prefix: FILE_NAME, limit: 1 });
     if (!blobs.length) {
-      return fallbackTeams;
+      return [];
     }
 
-    const res = await fetch(blobs[0].url, {
-      cache: "no-store",
-      next: { revalidate: 0, tags: ["teams"] },
-      headers: {
-        "cache-control": "no-cache",
-        pragma: "no-cache",
-      },
-    });
-    if (!res.ok) {
-      return fallbackTeams;
+    const response = await fetch(blobs[0].url, { cache: "no-store" });
+    if (!response.ok) {
+      return [];
     }
 
-    const json = await res.json().catch(() => []);
+    const json = await response.json().catch(() => []);
     if (!Array.isArray(json)) {
-      return fallbackTeams;
+      return [];
     }
 
-    const parsedTeams = json
+    return json
       .map((entry) => sanitizeTeam(entry))
       .filter((team): team is Team => Boolean(team));
-
-    const mergedBySlug = new Map<string, Team>();
-    for (const team of parsedTeams) {
-      mergedBySlug.set(team.slug, team);
-    }
-    for (const team of fallbackTeams) {
-      if (!mergedBySlug.has(team.slug)) {
-        mergedBySlug.set(team.slug, team);
-      }
-    }
-
-    const mergedTeams = Array.from(mergedBySlug.values());
-    inMemoryDynamicTeams = mergedTeams;
-    return mergedTeams;
   } catch (error) {
     console.error("Failed to load dynamic teams", error);
-    return fallbackTeams;
+    return [];
   }
 }
 
@@ -160,11 +134,8 @@ export async function saveDynamicTeams(teams: Team[]): Promise<void> {
   await put(FILE_NAME, JSON.stringify(teams, null, 2), {
     access: "public",
     addRandomSuffix: false,
-    allowOverwrite: true,
     contentType: "application/json",
-    cacheControlMaxAge: 0, // prevent edge caching
   });
-  inMemoryDynamicTeams = teams;
 }
 
 export function slugify(value: string): string {
@@ -207,7 +178,6 @@ export function teamNameExists(name: string, teams: Team[]): boolean {
 }
 
 export async function getAllTeams(): Promise<Team[]> {
-  noStore();
   const dynamicTeams = await loadDynamicTeams();
   const merged = new Map<string, Team>();
 
@@ -283,24 +253,6 @@ export async function addTeam(input: AddTeamInput): Promise<Team> {
   dynamicTeams.push(newTeam);
   await saveDynamicTeams(dynamicTeams);
 
-  await waitForTeamToPersist(uniqueSlug);
-
   return newTeam;
-}
-
-async function waitForTeamToPersist(slug: string): Promise<void> {
-  const maxAttempts = 6;
-  const baseDelayMs = 150;
-
-  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    const teams = await loadDynamicTeams();
-    if (teams.some((team) => team.slug === slug)) {
-      return;
-    }
-
-    const delay = baseDelayMs * Math.max(1, attempt + 1);
-    await new Promise((resolve) => setTimeout(resolve, delay));
-  }
-  console.warn(`Team with slug "${slug}" was not visible after persistence attempts.`);
 }
 
