@@ -28,6 +28,8 @@ export default function RegisterTeamPage() {
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDonateOpen, setIsDonateOpen] = useState(false);
+  const [isWaitingForTeam, setIsWaitingForTeam] = useState(false);
+  const [pendingTeamSlug, setPendingTeamSlug] = useState<string | null>(null);
 
   function validate(): boolean {
     const nextErrors: FormErrors = {};
@@ -63,6 +65,38 @@ export default function RegisterTeamPage() {
     setSubmissionError(null);
   }
 
+  async function waitForTeamAvailability(path: string, slug?: string | null): Promise<boolean> {
+    setIsWaitingForTeam(true);
+    setPendingTeamSlug(slug ?? null);
+
+    const timeoutMs = 45000;
+    const pollIntervalMs = 400;
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt < timeoutMs) {
+      try {
+        const response = await fetch(path, {
+          method: "GET",
+          cache: "no-store",
+          headers: {
+            "cache-control": "no-cache",
+            pragma: "no-cache",
+          },
+        });
+
+        if (response.ok) {
+          return true;
+        }
+      } catch (error) {
+        console.warn("Team page availability check failed", error);
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+    }
+
+    return false;
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (isSubmitting) {
@@ -75,6 +109,9 @@ export default function RegisterTeamPage() {
 
     setIsSubmitting(true);
     setSubmissionError(null);
+
+    let shouldResetSubmitting = true;
+    let shouldClearWaitingState = false;
 
     try {
       const response = await fetch("/api/teams/register", {
@@ -102,21 +139,36 @@ export default function RegisterTeamPage() {
         return;
       }
 
-      if (data?.redirect) {
-        router.push(data.redirect);
-        router.refresh();
-      } else if (data?.slug) {
-        router.push(`/teams/${data.slug}`);
-        router.refresh();
-      } else {
-        router.push("/teams");
-        router.refresh();
-      }
+      const redirectPath = data?.redirect
+        ? data.redirect
+        : data?.slug
+          ? `/teams/${data.slug}`
+          : "/teams";
+
+      const slugFromResponse = data?.slug
+        ?? (redirectPath.startsWith("/teams/")
+          ? redirectPath.replace(/^\/teams\//, "").replace(/\/$/, "") || null
+          : null);
+
+      shouldClearWaitingState = true;
+      await waitForTeamAvailability(redirectPath, slugFromResponse);
+
+      router.push(redirectPath);
+      router.refresh();
+      shouldResetSubmitting = false;
+      shouldClearWaitingState = false;
+      return;
     } catch (error) {
       console.error(error);
       setSubmissionError("Something went wrong. Please try again in a moment.");
     } finally {
-      setIsSubmitting(false);
+      if (shouldResetSubmitting) {
+        setIsSubmitting(false);
+      }
+      if (shouldClearWaitingState) {
+        setIsWaitingForTeam(false);
+        setPendingTeamSlug(null);
+      }
     }
   }
 
@@ -241,6 +293,18 @@ export default function RegisterTeamPage() {
 
       <SiteFooter onDonateClick={() => setIsDonateOpen(true)} />
       <DonateModal open={isDonateOpen} onOpenChange={setIsDonateOpen} />
+
+      {isWaitingForTeam ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 backdrop-blur-sm">
+          <div className="w-full max-w-xs rounded-3xl bg-white/95 p-6 text-center shadow-2xl">
+            <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-2 border-transparent border-l-[#007a3d] border-t-[#007a3d]" />
+            <p className="text-sm font-semibold text-slate-900">
+              {pendingTeamSlug ? `Publishing /teams/${pendingTeamSlug}…` : "Publishing your team page…"}
+            </p>
+            <p className="mt-2 text-xs text-slate-600">Hang tight—we’ll redirect you as soon as it’s live.</p>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
