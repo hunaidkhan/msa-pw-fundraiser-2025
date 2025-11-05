@@ -132,6 +132,7 @@ function sanitizeTeam(value: unknown): Team | undefined {
 
 export async function saveDynamicTeams(teams: Team[]): Promise<void> {
   await put(FILE_NAME, JSON.stringify(teams, null, 2), {
+    access: "public",
     addRandomSuffix: false,
     contentType: "application/json",
   });
