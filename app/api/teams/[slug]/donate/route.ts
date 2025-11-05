@@ -1,9 +1,11 @@
+// Add this to your donate route to help debug
+
 import { NextRequest, NextResponse } from "next/server";
 import { ApiError, Client, Environment } from "square";
 import crypto from "node:crypto";
 import { getTeamBySlug } from "@/config/teams";
 
-/** Pick Square env from deployment context (don't rely on NODE_ENV on Vercel) */
+/** Pick Square env from deployment context */
 const isProd = process.env.VERCEL_ENV === "production";
 const accessToken = process.env.SQUARE_ACCESS_TOKEN;
 const locationId = process.env.SQUARE_LOCATION_ID;
@@ -19,15 +21,32 @@ function assertEnv() {
     throw new Error(`Missing required env var(s): ${missing.join(", ")}`);
   }
   
+  // 🔍 Add helpful debugging info
+  console.log("[Donate Route] Square Environment:", isProd ? "PRODUCTION" : "SANDBOX");
+  console.log("[Donate Route] VERCEL_ENV:", process.env.VERCEL_ENV);
+  console.log("[Donate Route] Access Token prefix:", accessToken?.substring(0, 10) + "...");
+  console.log("[Donate Route] Location ID:", locationId?.substring(0, 8) + "...");
+  
+  // 🚨 Token format validation
+  if (isProd && accessToken?.startsWith("EAAAEOoq")) {
+    console.warn("[Donate Route] ⚠️  WARNING: This looks like a SANDBOX token but you're in PRODUCTION mode!");
+  }
+  if (!isProd && !accessToken?.startsWith("EAAAEOoq")) {
+    console.warn("[Donate Route] ⚠️  WARNING: This looks like a PRODUCTION token but you're in SANDBOX mode!");
+  }
+  
   if (CURRENCY !== "CAD") {
     throw new Error(`Only CAD is supported currently. Set SQUARE_CURRENCY=CAD (got ${CURRENCY}).`);
   }
 }
 
 function makeClient() {
+  const env = isProd ? Environment.Production : Environment.Sandbox;
+  console.log("[Donate Route] Creating Square client for environment:", env);
+  
   return new Client({
     bearerAuthCredentials: { accessToken: accessToken! },
-    environment: isProd ? Environment.Production : Environment.Sandbox,
+    environment: env,
   });
 }
 
@@ -35,7 +54,6 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: stri
   console.log("[Donate Route] Request received");
   
   try {
-    // Check env vars first
     assertEnv();
     console.log("[Donate Route] Environment variables validated");
 
@@ -63,7 +81,6 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: stri
     const cents = Math.round(amount * 100);
     const client = makeClient();
 
-    // Build a deployment-aware redirect URL (works for previews & prod)
     const origin = new URL(req.url).origin;
     const redirectUrl = `${origin}/teams/${team.slug}?thankyou=1`;
 
@@ -102,8 +119,15 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: stri
         detail: e?.detail,
       });
       
+      // Add helpful error messages
+      let userMessage = e?.detail ?? e?.code ?? "Square request failed.";
+      if (e?.category === "AUTHENTICATION_ERROR") {
+        userMessage = "Payment system configuration error. Please contact support.";
+        console.error("[Donate Route] 🚨 AUTHENTICATION ERROR - Check your Square credentials!");
+      }
+      
       return NextResponse.json(
-        { error: e?.detail ?? e?.code ?? "Square request failed." },
+        { error: userMessage },
         { status: err.statusCode ?? 500 }
       );
     }
