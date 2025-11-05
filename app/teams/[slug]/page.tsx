@@ -7,6 +7,7 @@ import { DonateInline } from "./DonateInline";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+
 // To switch to root-level slugs (e.g., /team-falcon), move this file to app/[slug]/page.tsx and update links accordingly.
 
 type TeamPageProps = {

@@ -39,18 +39,38 @@ export default function RegisterTeamPage() {
   }
 
   async function waitForTeamPage(path: string): Promise<boolean> {
-    const maxAttempts = 10;
+    const maxAttempts = 15; // Increased from 10
+    const baseDelay = 800; // Increased from 600
+    
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
       try {
-        const response = await fetch(path, { method: "GET", cache: "no-store" });
+        // Add cache-busting query param
+        const cacheBuster = `?_t=${Date.now()}`;
+        const response = await fetch(path + cacheBuster, { 
+          method: "HEAD", // Use HEAD instead of GET for faster checks
+          cache: "no-store",
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+          }
+        });
+        
         if (response.ok) {
+          // Add a small delay after success to ensure everything is ready
+          await sleep(300);
           return true;
         }
       } catch (error) {
-        console.error("Waiting for team page availability failed", error);
+        console.warn(`Attempt ${attempt + 1}/${maxAttempts} failed:`, error);
       }
 
-      await sleep(600);
+      // Progressive backoff: wait longer on later attempts
+      const delay = baseDelay + (attempt * 200);
+      await sleep(delay);
+      
+      // Update status message with progress
+      if (attempt > 5) {
+        setStatusMessage(`Still preparing your team page... (${attempt}/${maxAttempts})`);
+      }
     }
 
     return false;
@@ -103,7 +123,7 @@ export default function RegisterTeamPage() {
     setIsSubmitting(true);
     setSubmissionPhase("registering");
     setSubmissionError(null);
-    setStatusMessage(null);
+    setStatusMessage("Creating your team...");
     setPendingTeamSlug(null);
 
     try {
@@ -132,35 +152,43 @@ export default function RegisterTeamPage() {
         return;
       }
 
-      const target = data?.redirect
-        ? data.redirect
-        : data?.slug
-          ? `/teams/${data.slug}`
-          : "/teams";
-
-      if (data?.slug) {
-        setPendingTeamSlug(data.slug);
+      const slug = data?.slug;
+      if (!slug) {
+        throw new Error("No team slug returned");
       }
 
-      if (target.startsWith("/teams/")) {
-        setSubmissionPhase("preparing");
-        setStatusMessage("Publishing your new team page…");
-        const ready = await waitForTeamPage(target);
-        if (!ready) {
-          setStatusMessage(
-            "Your team was registered! The page is still publishing—try the link below in a moment.",
-          );
-          return;
-        }
+      setPendingTeamSlug(slug);
+      const target = `/teams/${slug}`;
+
+      setSubmissionPhase("preparing");
+      setStatusMessage("Team created! Preparing your page...");
+
+      // Wait for the page to be ready
+      const ready = await waitForTeamPage(target);
+      
+      if (!ready) {
+        // Page still isn't ready after max attempts
+        setStatusMessage(
+          "Your team was registered successfully! The page is still building. You can visit it using the link below or refresh in a moment."
+        );
+        setIsSubmitting(false);
+        setSubmissionPhase("idle");
+        return;
       }
 
-      router.push(target);
+      // Success! Page is ready
+      setStatusMessage("Success! Redirecting to your team page...");
+      await sleep(500); // Brief delay for user feedback
+      
+      // Use router.push with a cache bust
+      router.push(`${target}?new=1`);
+      
     } catch (error) {
       console.error(error);
       setSubmissionError("Something went wrong. Please try again in a moment.");
+      setSubmissionPhase("idle");
     } finally {
       setIsSubmitting(false);
-      setSubmissionPhase("idle");
     }
   }
 
@@ -267,46 +295,58 @@ export default function RegisterTeamPage() {
               </div>
             ) : null}
 
+            {statusMessage ? (
+              <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                <div className="flex items-center gap-3">
+                  {isSubmitting ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
+                  ) : null}
+                  <p>{statusMessage}</p>
+                </div>
+                {pendingTeamSlug && !isSubmitting ? (
+                  <p className="mt-3">
+                    <a
+                      href={`/teams/${pendingTeamSlug}`}
+                      className="font-semibold text-[#007a3d] underline-offset-2 hover:underline"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        router.push(`/teams/${pendingTeamSlug}?new=1`);
+                      }}
+                    >
+                      Click here to visit your team page
+                    </a>
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
               <p className="text-xs text-slate-500">
                 By submitting you affirm your team will uphold the campaign&apos;s solidarity principles.
               </p>
               <button
                 type="submit"
-                className="inline-flex items-center justify-center rounded-full bg-[#007a3d] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#007a3d]/40 transition hover:bg-[#006633] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#007a3d] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#007a3d]/40 transition hover:bg-[#006633] disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={isSubmitting}
               >
-                {submissionPhase === "preparing"
-                  ? "Publishing team page…"
-                  : submissionPhase === "registering"
-                    ? "Registering…"
-                    : "Create my team"}
+                {isSubmitting ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    {submissionPhase === "preparing"
+                      ? "Publishing page..."
+                      : "Creating team..."}
+                  </>
+                ) : (
+                  "Create my team"
+                )}
               </button>
             </div>
-
-            {statusMessage ? (
-              <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                <p>{statusMessage}</p>
-                {pendingTeamSlug ? (
-                  <p className="mt-2">
-                    <a
-                      href={`/teams/${pendingTeamSlug}`}
-                      className="font-semibold text-[#007a3d] underline-offset-2 hover:underline"
-                    >
-                      Open your team page
-                    </a>
-                    .
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
           </form>
         </div>
       </main>
 
-      <SiteFooter onDonateClick={() => setIsDonateOpen(true)} />
+      {/* <SiteFooter onDonateClick={() => setIsDonateOpen(true)} /> */}
       <DonateModal open={isDonateOpen} onOpenChange={setIsDonateOpen} />
     </div>
   );
 }
-
