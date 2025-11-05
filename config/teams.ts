@@ -134,6 +134,7 @@ export async function saveDynamicTeams(teams: Team[]): Promise<void> {
   await put(FILE_NAME, JSON.stringify(teams, null, 2), {
     access: "public",
     addRandomSuffix: false,
+    allowOverwrite:true,
     contentType: "application/json",
   });
 }
