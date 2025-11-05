@@ -3,14 +3,17 @@ import type { Metadata } from "next";
 import { TeamCard } from "@/app/components/TeamCard";
 import { getAllTeams } from "@/config/teams";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export const metadata: Metadata = {
   title: "Meet Our Teams | Palestine Solidarity Fundraiser",
   description:
     "Discover the teams championing relief, resilience, and hope for communities across Palestine.",
 };
 
-const TeamsPage = () => {
-  const teams = getAllTeams();
+const TeamsPage = async () => {
+  const teams = await getAllTeams();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-700 via-white to-red-600/20 py-16">
