@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import type { Team } from "@/config/teams";
 
 const formatter = new Intl.NumberFormat("en-CA", {
@@ -11,17 +10,14 @@ const formatter = new Intl.NumberFormat("en-CA", {
 });
 
 type DonationFormProps = {
-  teams: Team[]; // Team must include: id, name, slug, description?
+  teams: Team[];
 };
 
 export const DonationForm = ({ teams }: DonationFormProps) => {
-  // 🔁 Use SLUG as the identifier everywhere
   const [teamSlug, setTeamSlug] = useState<string>(teams[0]?.slug ?? "");
   const [amount, setAmount] = useState<string>("50");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // kept but no longer used for UI link step
-  const [paymentLink, setPaymentLink] = useState<string | null>(null);
 
   const selectedTeam = useMemo(
     () => teams.find((team) => team.slug === teamSlug),
@@ -34,7 +30,6 @@ export const DonationForm = ({ teams }: DonationFormProps) => {
     event.preventDefault();
     setLoading(true);
     setError(null);
-    setPaymentLink(null);
 
     const numericAmount = Number(amount);
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
@@ -44,7 +39,6 @@ export const DonationForm = ({ teams }: DonationFormProps) => {
     }
 
     try {
-      // ✅ POST to slug-based API; currency locked to CAD
       const response = await fetch(`/api/teams/${teamSlug}/donate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -56,11 +50,12 @@ export const DonationForm = ({ teams }: DonationFormProps) => {
       if (!response.ok) throw new Error(data.error ?? "Failed to generate payment link.");
       if (!data.url) throw new Error("No payment link was returned. Try again.");
 
-      // 🚀 Direct redirect (single step)
+      // ✅ Keep loading state - redirect will happen while showing spinner
       window.location.assign(data.url);
-      // If you ever want to keep state:
-      // setPaymentLink(data.url);
+      // Loader stays visible until browser navigates away
+      
     } catch (err) {
+      // ❌ Only disable loading on error
       setError(err instanceof Error ? err.message : "Unable to start donation flow. Try again later.");
       setLoading(false);
     }
@@ -76,7 +71,8 @@ export const DonationForm = ({ teams }: DonationFormProps) => {
           id="team"
           value={teamSlug}
           onChange={(event) => setTeamSlug(event.target.value)}
-          className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-inner focus:outline-none focus:ring-2 focus:ring-emerald-300"
+          disabled={loading}
+          className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-inner focus:outline-none focus:ring-2 focus:ring-emerald-300 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {teams.map((team) => (
             <option key={team.slug} value={team.slug} className="text-zinc-900">
@@ -104,7 +100,8 @@ export const DonationForm = ({ teams }: DonationFormProps) => {
             step="0.01"
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
-            className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-lg text-slate-900 shadow-inner focus:outline-none focus:ring-2 focus:ring-emerald-300"
+            disabled={loading}
+            className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-lg text-slate-900 shadow-inner focus:outline-none focus:ring-2 focus:ring-emerald-300 disabled:opacity-60 disabled:cursor-not-allowed"
           />
         </div>
         <div className="flex flex-wrap gap-3">
@@ -113,7 +110,8 @@ export const DonationForm = ({ teams }: DonationFormProps) => {
               key={value}
               type="button"
               onClick={() => setAmount(String(value))}
-              className="rounded-full border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100"
+              disabled={loading}
+              className="rounded-full border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {formatter.format(value)}
             </button>
@@ -134,19 +132,42 @@ export const DonationForm = ({ teams }: DonationFormProps) => {
         <p className="rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
       ) : null}
 
-      {/* Removed the intermediate link UI — direct redirect instead */}
-      {/* {paymentLink ? ... : null} */}
-
       <button
         type="submit"
         disabled={loading}
-        className="inline-flex w-full items-center justify-center rounded-full bg-emerald-600 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-emerald-400/40 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-emerald-400/40 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {loading ? "Preparing secure checkout…" : selectedTeam ? `Donate to ${selectedTeam.name}` : "Donate"}
+        {loading ? (
+          <>
+            <svg
+              className="h-5 w-5 animate-spin"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />
+            </svg>
+            Redirecting to checkout...
+          </>
+        ) : (
+          selectedTeam ? `Donate to ${selectedTeam.name}` : "Donate"
+        )}
       </button>
 
       <p className="text-center text-xs text-slate-500">
-        You’ll be taken straight to a secure Square checkout. Currency: <strong>CAD</strong>.
+        You'll be taken straight to a secure Square checkout. Currency: <strong>CAD</strong>.
       </p>
     </form>
   );
