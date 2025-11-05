@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
   try {
     const team = await addTeam({ name, email, goal });
-    revalidateTag("teams");
+    revalidateTag("teams", { expire: 0 });
     revalidatePath("/teams");
     revalidatePath(`/teams/${team.slug}`);
     return NextResponse.json(
