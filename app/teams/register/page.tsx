@@ -27,7 +27,34 @@ export default function RegisterTeamPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionPhase, setSubmissionPhase] = useState<
+    "idle" | "registering" | "preparing"
+  >("idle");
   const [isDonateOpen, setIsDonateOpen] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [pendingTeamSlug, setPendingTeamSlug] = useState<string | null>(null);
+
+  function sleep(duration: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, duration));
+  }
+
+  async function waitForTeamPage(path: string): Promise<boolean> {
+    const maxAttempts = 10;
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      try {
+        const response = await fetch(path, { method: "GET", cache: "no-store" });
+        if (response.ok) {
+          return true;
+        }
+      } catch (error) {
+        console.error("Waiting for team page availability failed", error);
+      }
+
+      await sleep(600);
+    }
+
+    return false;
+  }
 
   function validate(): boolean {
     const nextErrors: FormErrors = {};
@@ -74,7 +101,10 @@ export default function RegisterTeamPage() {
     }
 
     setIsSubmitting(true);
+    setSubmissionPhase("registering");
     setSubmissionError(null);
+    setStatusMessage(null);
+    setPendingTeamSlug(null);
 
     try {
       const response = await fetch("/api/teams/register", {
@@ -102,18 +132,35 @@ export default function RegisterTeamPage() {
         return;
       }
 
-      if (data?.redirect) {
-        router.push(data.redirect);
-      } else if (data?.slug) {
-        router.push(`/teams/${data.slug}`);
-      } else {
-        router.push("/teams");
+      const target = data?.redirect
+        ? data.redirect
+        : data?.slug
+          ? `/teams/${data.slug}`
+          : "/teams";
+
+      if (data?.slug) {
+        setPendingTeamSlug(data.slug);
       }
+
+      if (target.startsWith("/teams/")) {
+        setSubmissionPhase("preparing");
+        setStatusMessage("Publishing your new team page…");
+        const ready = await waitForTeamPage(target);
+        if (!ready) {
+          setStatusMessage(
+            "Your team was registered! The page is still publishing—try the link below in a moment.",
+          );
+          return;
+        }
+      }
+
+      router.push(target);
     } catch (error) {
       console.error(error);
       setSubmissionError("Something went wrong. Please try again in a moment.");
     } finally {
       setIsSubmitting(false);
+      setSubmissionPhase("idle");
     }
   }
 
@@ -229,9 +276,30 @@ export default function RegisterTeamPage() {
                 className="inline-flex items-center justify-center rounded-full bg-[#007a3d] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#007a3d]/40 transition hover:bg-[#006633] disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Registering…" : "Create my team"}
+                {submissionPhase === "preparing"
+                  ? "Publishing team page…"
+                  : submissionPhase === "registering"
+                    ? "Registering…"
+                    : "Create my team"}
               </button>
             </div>
+
+            {statusMessage ? (
+              <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                <p>{statusMessage}</p>
+                {pendingTeamSlug ? (
+                  <p className="mt-2">
+                    <a
+                      href={`/teams/${pendingTeamSlug}`}
+                      className="font-semibold text-[#007a3d] underline-offset-2 hover:underline"
+                    >
+                      Open your team page
+                    </a>
+                    .
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
           </form>
         </div>
       </main>
