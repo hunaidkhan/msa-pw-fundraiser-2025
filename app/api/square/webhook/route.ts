@@ -107,6 +107,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "no payment in payload" }, { status: 400 });
   }
 
+  // ✅ Log the full payment object in non-production for debugging
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[Square Webhook] Full payment object:", JSON.stringify(payment, null, 2));
+  }
+
   const status = (payment.status ?? "").toUpperCase();
   
   // ✅ Accept both COMPLETED and APPROVED in all environments
@@ -121,11 +126,26 @@ export async function POST(req: Request) {
   
   console.log("[Square Webhook] ✓ Processing successful payment with status:", status);
 
-  const amountRaw = payment.amountMoney?.amount ?? 0;
-  const amountCents =
-    typeof amountRaw === "bigint" ? Number(amountRaw)
-    : typeof amountRaw === "number" ? amountRaw
-    : 0;
+  // ✅ FIXED: Better amount parsing with logging
+  const amountRaw = payment.amountMoney?.amount;
+  console.log("[Square Webhook] Raw amount from Square:", amountRaw, "type:", typeof amountRaw);
+  
+  let amountCents = 0;
+  if (typeof amountRaw === "bigint") {
+    amountCents = Number(amountRaw);
+  } else if (typeof amountRaw === "number") {
+    amountCents = amountRaw;
+  } else if (typeof amountRaw === "string") {
+    // Sometimes Square sends it as a string
+    amountCents = parseInt(amountRaw, 10);
+  }
+  
+  console.log("[Square Webhook] Parsed amount in cents:", amountCents);
+  
+  if (!amountCents || amountCents <= 0) {
+    console.error("[Square Webhook] Invalid amount:", amountCents, "from raw:", amountRaw);
+    // Still process the payment but log the error
+  }
 
   const teamRef = parseTeamRef(payment.note);
   
