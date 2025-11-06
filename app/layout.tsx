@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { LazyMotion, domAnimation } from "framer-motion";
 import { Toaster } from "sonner";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/next"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -45,6 +46,7 @@ export default function RootLayout({
           </LazyMotion>
         </div>
         <Toaster richColors position="top-center" />
+        <Analytics />
       </body>
     </html>
   );
