@@ -1,21 +1,9 @@
-// app/api/square/webhook/route.ts
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
-import { put, list } from "@vercel/blob"; // ⬅️ NEW
+import { upsertDonation, type Donation } from "@/lib/donationsStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-type Donation = {
-  id: string;
-  teamRef: string | null;
-  amountCents: number;
-  currency: "USD" | "CAD" | string;
-  email?: string;
-  receiptUrl?: string;
-  createdAt: string;
-  raw?: unknown;
-};
 
 type SquarePaymentMoney = {
   amount?: bigint | number | null;
@@ -46,17 +34,19 @@ type SquareWebhookEvent = {
   };
 };
 
-// ---------- config / helpers ----------
 const SIGNATURE_KEY = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY ?? "";
 const WEBHOOK_URL   = process.env.SQUARE_WEBHOOK_URL ?? "";
-const BLOB_TOKEN    = process.env.BLOB_READ_WRITE_TOKEN; // optional
 
+// ✅ FIXED: Parse the structured note we're now sending
 function parseTeamRef(note?: string | null): string | null {
   if (!note) return null;
-  const mSlug = note.match(/(?:^|;)\s*team=([^;]+)/i);
-  const mId   = note.match(/(?:^|;)\s*teamId=([^;]+)/i);
-  const ref = (mSlug?.[1] ?? mId?.[1] ?? "").trim();
-  return ref || null;
+  
+  // Match: "teamSlug=team-falcon" or "teamSlug=my-team-2"
+  const match = note.match(/teamSlug=([^\s;]+)/i);
+  const slug = match?.[1]?.trim();
+  
+  console.log("[Webhook] Parsed team slug:", slug, "from note:", note);
+  return slug || null;
 }
 
 function verifySquareSignature(bodyRaw: string, headerSig: string | null): boolean {
@@ -71,36 +61,6 @@ function verifySquareSignature(bodyRaw: string, headerSig: string | null): boole
   }
 }
 
-async function persistDonationToBlob(paymentId: string, teamRef: string, amountCents: number, createdAt: string) {
-  // one file per payment id → dedupe by filename
-  await put(`donations/${paymentId}.json`,
-    JSON.stringify({ paymentId, teamRef, amountCents, createdAt }),
-    {
-      access: "public",
-      contentType: "application/json",
-      addRandomSuffix: false,
-      allowOverwrite: false, // if exists => dedup
-    }
-  ).catch((err: unknown) => {
-    const msg = String((err as any)?.message ?? "");
-    if (msg.includes("already exists")) {
-      // already processed; safe to ignore
-      return;
-    }
-    throw err;
-  });
-}
-
-// (Optional) utility for later: read all donations back
-export async function readAllDonationsFromBlob(): Promise<Donation[]> {
-  const { blobs } = await list({ prefix: "donations/", token: BLOB_TOKEN });
-  const rows = await Promise.all(
-    blobs.map(b => fetch(b.url, { cache: "no-store" }).then(r => r.json() as Promise<Donation>))
-  );
-  return rows;
-}
-
-// ---------- route handlers ----------
 export async function POST(req: Request) {
   const rawBody = await req.text();
 
@@ -132,17 +92,24 @@ export async function POST(req: Request) {
   }
 
   const type = evt.type ?? evt.data?.type ?? "";
+  
+  // ✅ FIXED: Listen for payment.created (not payment.updated)
   if (!type.startsWith("payment.")) {
+    console.log("[Square Webhook] Ignoring non-payment event:", type);
     return NextResponse.json({ ok: true, ignored: type }, { status: 200 });
   }
 
+  console.log("[Square Webhook] Processing event:", type);
+
   const payment: SquarePayment | undefined = evt.data?.object?.payment as any;
   if (!payment?.id) {
+    console.error("[Square Webhook] No payment in payload");
     return NextResponse.json({ ok: false, error: "no payment in payload" }, { status: 400 });
-    }
+  }
 
   const status = (payment.status ?? "").toUpperCase();
   if (status !== "COMPLETED") {
+    console.log("[Square Webhook] Skipping non-completed payment:", status);
     return NextResponse.json({ ok: true, skipped: `status=${status}` }, { status: 200 });
   }
 
@@ -152,11 +119,18 @@ export async function POST(req: Request) {
     : typeof amountRaw === "number" ? amountRaw
     : 0;
 
+  const teamRef = parseTeamRef(payment.note);
+  
+  if (!teamRef) {
+    console.warn("[Square Webhook] No team reference found in payment note:", payment.note);
+    return NextResponse.json({ ok: true, skipped: "no teamRef" }, { status: 200 });
+  }
+
   const record: Donation = {
     id: payment.id,
-    teamRef: parseTeamRef(payment.note),
+    teamRef,
     amountCents,
-    currency: (payment.amountMoney?.currency ?? "USD") as string,
+    currency: (payment.amountMoney?.currency ?? "CAD") as string,
     email: payment.customerDetails?.emailAddress ?? undefined,
     receiptUrl: payment.receiptUrl ?? undefined,
     createdAt: payment.createdAt ?? new Date().toISOString(),
@@ -164,15 +138,20 @@ export async function POST(req: Request) {
   };
 
   try {
-    const teamRef = parseTeamRef(payment.note); // you already have this
-    if (!teamRef) return NextResponse.json({ ok: true, skipped: "no teamRef" });
-    await persistDonationToBlob(payment.id, teamRef, amountCents, payment.createdAt ?? new Date().toISOString());
+    console.log("[Square Webhook] Upserting donation:", {
+      id: record.id,
+      teamRef: record.teamRef,
+      amountCents: record.amountCents,
+    });
+    
+    await upsertDonation(record);
+    
+    console.log("[Square Webhook] ✅ Successfully processed donation");
+    return NextResponse.json({ ok: true }, { status: 200 });
   } catch (e) {
     console.error("[Square Webhook] Failed to persist donation:", e);
     return NextResponse.json({ ok: false, error: "write failed" }, { status: 500 });
   }
-
-  return NextResponse.json({ ok: true }, { status: 200 });
 }
 
 export async function GET() {

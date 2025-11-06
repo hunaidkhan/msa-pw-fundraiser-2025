@@ -1,11 +1,13 @@
-// Add this to your donate route to help debug
+// ============================================
+// 1. FIXED DONATE ROUTE - Send structured note
+// app/api/teams/[slug]/donate/route.ts
+// ============================================
 
 import { NextRequest, NextResponse } from "next/server";
 import { ApiError, Client, Environment } from "square";
 import crypto from "node:crypto";
 import { getTeamBySlug } from "@/config/teams";
 
-/** Pick Square env from deployment context */
 const isProd = process.env.VERCEL_ENV === "production";
 const accessToken = process.env.SQUARE_ACCESS_TOKEN;
 const locationId = process.env.SQUARE_LOCATION_ID;
@@ -21,32 +23,15 @@ function assertEnv() {
     throw new Error(`Missing required env var(s): ${missing.join(", ")}`);
   }
   
-  // 🔍 Add helpful debugging info
-  console.log("[Donate Route] Square Environment:", isProd ? "PRODUCTION" : "SANDBOX");
-  console.log("[Donate Route] VERCEL_ENV:", process.env.VERCEL_ENV);
-  console.log("[Donate Route] Access Token prefix:", accessToken?.substring(0, 10) + "...");
-  console.log("[Donate Route] Location ID:", locationId?.substring(0, 8) + "...");
-  
-  // 🚨 Token format validation
-  if (isProd && accessToken?.startsWith("EAAAEOoq")) {
-    console.warn("[Donate Route] ⚠️  WARNING: This looks like a SANDBOX token but you're in PRODUCTION mode!");
-  }
-  if (!isProd && !accessToken?.startsWith("EAAAEOoq")) {
-    console.warn("[Donate Route] ⚠️  WARNING: This looks like a PRODUCTION token but you're in SANDBOX mode!");
-  }
-  
   if (CURRENCY !== "CAD") {
     throw new Error(`Only CAD is supported currently. Set SQUARE_CURRENCY=CAD (got ${CURRENCY}).`);
   }
 }
 
 function makeClient() {
-  const env = isProd ? Environment.Production : Environment.Sandbox;
-  console.log("[Donate Route] Creating Square client for environment:", env);
-  
   return new Client({
     bearerAuthCredentials: { accessToken: accessToken! },
-    environment: env,
+    environment: isProd ? Environment.Production : Environment.Sandbox,
   });
 }
 
@@ -55,21 +40,16 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: stri
   
   try {
     assertEnv();
-    console.log("[Donate Route] Environment variables validated");
 
     const { slug } = await ctx.params;
-    console.log("[Donate Route] Team slug:", slug);
-    
     const team = await getTeamBySlug(slug);
     if (!team) {
       console.error("[Donate Route] Team not found:", slug);
       return NextResponse.json({ error: `Team not found for slug: ${slug}` }, { status: 404 });
     }
-    console.log("[Donate Route] Team found:", team.name);
 
     const body = (await req.json()) as { amount?: number; currency?: string };
     const amount = Number(body?.amount ?? 0);
-    console.log("[Donate Route] Amount:", amount);
 
     if (!Number.isFinite(amount) || amount <= 0) {
       return NextResponse.json({ error: "Please provide a positive donation amount." }, { status: 400 });
@@ -86,6 +66,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: stri
 
     console.log("[Donate Route] Creating payment link for", cents, "cents");
 
+    // ✅ FIXED: Use structured format that matches webhook parser
+    const paymentNote = `teamSlug=${team.slug}`;
+
     const { result } = await client.checkoutApi.createPaymentLink({
       idempotencyKey: crypto.randomUUID(),
       quickPay: {
@@ -94,7 +77,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: stri
         locationId: locationId!,
       },
       description: `Support ${team.name}'s fundraiser.`,
-      paymentNote: `Team ${team.name} • slug ${team.slug}`,
+      paymentNote, // ✅ Send: "teamSlug=team-falcon"
       checkoutOptions: { redirectUrl },
     });
 
@@ -119,7 +102,6 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: stri
         detail: e?.detail,
       });
       
-      // Add helpful error messages
       let userMessage = e?.detail ?? e?.code ?? "Square request failed.";
       if (e?.category === "AUTHENTICATION_ERROR") {
         userMessage = "Payment system configuration error. Please contact support.";
