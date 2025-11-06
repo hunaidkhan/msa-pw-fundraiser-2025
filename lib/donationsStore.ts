@@ -24,7 +24,8 @@ const PAYMENTS_PREFIX = `${ROOT_PREFIX}/payments/`; // donations/payments/{payme
 const TOTALS_PREFIX = `${ROOT_PREFIX}/totals/`;     // donations/totals/{teamRef}.json
 
 // Helper: derive the blob item array type from list()
-type BlobItem = Awaited<ReturnType<typeof list>>["blobs"][number];
+type ListBlobResult = Awaited<ReturnType<typeof list>>;
+type BlobItem = ListBlobResult["blobs"][number];
 
 // ---------- Tiny utils ----------
 
@@ -47,7 +48,7 @@ async function listAll(prefix: string): Promise<BlobItem[]> {
   let cursor: string | undefined = undefined;
 
   do {
-    const page = await list({ prefix, cursor });
+    const page: ListBlobResult = await list({ prefix, cursor });
     if (page.blobs?.length) items.push(...page.blobs);
     cursor = page.cursor ?? undefined;
   } while (cursor);
@@ -60,7 +61,7 @@ async function listAll(prefix: string): Promise<BlobItem[]> {
  * Since the Blob API is path-based, we "find" it by listing its exact prefix.
  */
 async function getBlobByPath(pathname: string): Promise<BlobItem | null> {
-  const page = await list({ prefix: pathname, limit: 1 });
+  const page: ListBlobResult = await list({ prefix: pathname, limit: 1 });
   return page.blobs?.[0] ?? null;
 }
 
