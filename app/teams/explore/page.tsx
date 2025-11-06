@@ -3,7 +3,8 @@ import Link from "next/link";
 import { DonationForm } from "@/app/teams/explore/DonationForm";
 import { getAllTeams } from "@/config/teams";
 
-export const dynamic = "force-dynamic";
+// Use ISR with 60-second revalidation instead of force-dynamic
+export const revalidate = 60;
 export const runtime = "nodejs";
 
 export const metadata: Metadata = {

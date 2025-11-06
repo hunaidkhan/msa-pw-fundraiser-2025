@@ -1,5 +1,6 @@
 // lib/donationsStore.ts
 import { list, put, del } from "@vercel/blob";
+import { getTotals, getTeamTotal } from "./totalsStore";
 
 /**
  * Donation payload normalized from Square webhook.
@@ -85,36 +86,18 @@ export async function deleteDonation(paymentId: string): Promise<void> {
 }
 
 /**
- * Get the aggregate totals for ALL teams as a Record<teamRef, totalCents>,
- * computed by scanning donations/payments/*.json live.
+ * Get the aggregate totals for ALL teams as a Record<teamRef, totalCents>.
+ * Now reads from the pre-generated totals.json blob (simple operation, cached).
  */
 export async function totalsByTeam(): Promise<Record<string, number>> {
-  const blobs = await listAll(PAYMENTS_PREFIX);
-  const out: Record<string, number> = {};
-
-  for (const b of blobs) {
-    const d = await readPayment(b);
-    if (!d?.teamRef || !Number.isFinite(d.amountCents)) continue;
-    out[d.teamRef] = (out[d.teamRef] ?? 0) + d.amountCents;
-  }
-
-  return out;
+  return await getTotals();
 }
 
 /**
- * Get a single team's total in cents by summing payments with that teamRef.
- * Returns 0 if no payments exist for that team.
+ * Get a single team's total in cents.
+ * Now reads from the pre-generated totals.json blob (simple operation, cached).
+ * Returns 0 if no donations exist for that team.
  */
 export async function totalForTeam(teamRef: string): Promise<number> {
-  const blobs = await listAll(PAYMENTS_PREFIX);
-  let sum = 0;
-
-  for (const b of blobs) {
-    const d = await readPayment(b);
-    if (!d?.teamRef || d.teamRef !== teamRef) continue;
-    if (!Number.isFinite(d.amountCents)) continue;
-    sum += d.amountCents;
-  }
-
-  return sum;
+  return await getTeamTotal(teamRef);
 }

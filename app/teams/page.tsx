@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 import { getAllTeams } from "@/config/teams";
 import { TeamsPageShell } from "./TeamsPageShell";
 
-export const dynamic = "force-dynamic";
+// Use ISR with 60-second revalidation instead of force-dynamic
+export const revalidate = 60;
 export const runtime = "nodejs";
 
 export const metadata: Metadata = {
