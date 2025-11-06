@@ -28,12 +28,14 @@ type Donation = {
   raw?: unknown;
 };
 
+type ListBlobResult = Awaited<ReturnType<typeof list>>;
+
 async function listAll(prefix: string) {
   const items: any[] = [];
   let cursor: string | undefined = undefined;
 
   do {
-    const page = await list({ prefix, cursor });
+    const page: ListBlobResult = await list({ prefix, cursor });
     if (page.blobs?.length) items.push(...page.blobs);
     cursor = page.cursor ?? undefined;
   } while (cursor);
