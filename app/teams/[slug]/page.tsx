@@ -5,9 +5,9 @@ import { getTeamBySlug } from "@/config/teams";
 import { Suspense } from "react";
 import { DonateInline } from "./DonateInline";
 import { totalsByTeam } from "@/lib/donationsStore";
-import { unstable_noStore as noStore } from "next/cache";
 
-export const dynamic = "force-dynamic";
+// Use ISR with 30-second revalidation instead of force-dynamic
+export const revalidate = 30;
 export const runtime = "nodejs";
 
 // To switch to root-level slugs (e.g., /team-falcon), move this file to app/[slug]/page.tsx and update links accordingly.
@@ -41,9 +41,6 @@ export const generateMetadata = async ({ params }: TeamPageProps): Promise<Metad
 };
 
 const TeamPage = async ({ params, searchParams }: TeamPageProps) => {
-  // 🚫 Disable Next.js caching for this request path to ensure live totals
-  noStore();
-
   const { slug } = await params;
   const team = await getTeamBySlug(slug);
   if (!team) notFound();

@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { upsertDonation, type Donation } from "@/lib/donationsStore";
+import { incrementTeamTotal } from "@/lib/totalsStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -199,6 +200,10 @@ export async function POST(req: Request) {
     });
 
     await upsertDonation(record);
+
+    // Update the pre-generated totals blob
+    console.log("[Square Webhook] Updating team totals...");
+    await incrementTeamTotal(record.teamRef, record.amountCents);
 
     console.log("[Square Webhook] ✅ Successfully processed donation");
     return NextResponse.json({ ok: true }, { status: 200 });
