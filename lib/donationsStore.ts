@@ -1,5 +1,5 @@
 // lib/donationsStore.ts
-import { list, put } from "@vercel/blob";
+import { list, put, del } from "@vercel/blob";
 
 /**
  * Donation payload normalized from Square webhook.
@@ -17,11 +17,10 @@ export type Donation = {
   raw?: unknown;            // optional debug payload in non-prod
 };
 
-// ---------- Blob layout ----------
+// ---------- Blob layout (single source of truth = payments) ----------
 
 const ROOT_PREFIX = "donations";
 const PAYMENTS_PREFIX = `${ROOT_PREFIX}/payments/`; // donations/payments/{paymentId}.json
-const TOTALS_PREFIX = `${ROOT_PREFIX}/totals/`;     // donations/totals/{teamRef}.json
 
 // Helper: derive the blob item array type from list()
 type ListBlobResult = Awaited<ReturnType<typeof list>>;
@@ -31,6 +30,7 @@ type BlobItem = ListBlobResult["blobs"][number];
 
 async function fetchJson<T = unknown>(url: string): Promise<T | null> {
   try {
+    // Force freshness (avoid CDN/route cache)
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) return null;
     return (await res.json()) as T;
@@ -41,7 +41,6 @@ async function fetchJson<T = unknown>(url: string): Promise<T | null> {
 
 /**
  * List all blobs for a prefix (handles pagination).
- * Returns an array of blob items; you can read each via its public `url`.
  */
 async function listAll(prefix: string): Promise<BlobItem[]> {
   const items: BlobItem[] = [];
@@ -56,24 +55,20 @@ async function listAll(prefix: string): Promise<BlobItem[]> {
   return items;
 }
 
-/**
- * Fetch a single blob (by exact pathname) if it exists.
- * Since the Blob API is path-based, we "find" it by listing its exact prefix.
- */
-async function getBlobByPath(pathname: string): Promise<BlobItem | null> {
-  const page: ListBlobResult = await list({ prefix: pathname, limit: 1 });
-  return page.blobs?.[0] ?? null;
+/** Read one payment JSON by blob item (fresh). */
+async function readPayment(b: BlobItem): Promise<Donation | null> {
+  if (!b.pathname.endsWith(".json")) return null;
+  return (await fetchJson<Donation>(b.url)) ?? null;
 }
 
-// ---------- Public API ----------
+// ---------- Public API (payments are the source of truth) ----------
 
 /**
- * Idempotently store a payment record and update the team's total.
- * - Writes donations/payments/{paymentId}.json (allowOverwrite: true, for webhook retries)
- * - If teamRef exists, increments donations/totals/{teamRef}.json
+ * Idempotently store a payment record.
+ * Writes to donations/payments/{paymentId}.json (allowOverwrite: true, for webhook retries).
+ * NOTE: No totals are incremented here; totals are computed live from payments.
  */
 export async function upsertDonation(d: Donation): Promise<void> {
-  // 1) Persist the payment blob (idempotent / retry-safe)
   const paymentPath = `${PAYMENTS_PREFIX}${d.id}.json`;
   await put(paymentPath, JSON.stringify(d, null, 2), {
     access: "public",
@@ -81,73 +76,45 @@ export async function upsertDonation(d: Donation): Promise<void> {
     allowOverwrite: true, // retry-safe
     contentType: "application/json",
   });
+}
 
-  // 2) Update per-team total (only if we have a teamRef)
-  if (!d.teamRef) return;
-
-  const totalsPath = `${TOTALS_PREFIX}${d.teamRef}.json`;
-
-  // Read current total if exists
-  let currentTotal = 0;
-  const existing = await getBlobByPath(totalsPath);
-  if (existing) {
-    const json = await fetchJson<{ team: string; totalCents: number }>(existing.url);
-    if (json && Number.isFinite(json.totalCents)) {
-      currentTotal = json.totalCents;
-    }
-  }
-
-  const next = {
-    team: d.teamRef,
-    totalCents: currentTotal + d.amountCents,
-    updatedAt: new Date().toISOString(),
-  };
-
-  await put(totalsPath, JSON.stringify(next, null, 2), {
-    access: "public",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    contentType: "application/json",
-  });
+/** Delete a single payment by Square payment id (useful for admin fixes). */
+export async function deleteDonation(paymentId: string): Promise<void> {
+  const paymentPath = `${PAYMENTS_PREFIX}${paymentId}.json`;
+  await del(paymentPath);
 }
 
 /**
- * Get the aggregate totals for ALL teams as a Record<teamRef, totalCents>.
- * Reads donations/totals/*.json and combines them.
+ * Get the aggregate totals for ALL teams as a Record<teamRef, totalCents>,
+ * computed by scanning donations/payments/*.json live.
  */
 export async function totalsByTeam(): Promise<Record<string, number>> {
-  const blobs = await listAll(TOTALS_PREFIX);
+  const blobs = await listAll(PAYMENTS_PREFIX);
   const out: Record<string, number> = {};
 
-  // Only pick *.json under totals/
-  const jsons = blobs.filter((b) => b.pathname.startsWith(TOTALS_PREFIX) && b.pathname.endsWith(".json"));
-
-  for (const b of jsons) {
-    const json = await fetchJson<{ team: string; totalCents: number }>(b.url);
-    if (!json) continue;
-
-    const team = json.team;
-    const total = Number(json.totalCents ?? 0);
-    if (!team) continue;
-
-    out[team] = total;
+  for (const b of blobs) {
+    const d = await readPayment(b);
+    if (!d?.teamRef || !Number.isFinite(d.amountCents)) continue;
+    out[d.teamRef] = (out[d.teamRef] ?? 0) + d.amountCents;
   }
 
   return out;
 }
 
 /**
- * Get a single team's total in cents.
- * Returns 0 if the totals file doesn't exist yet.
+ * Get a single team's total in cents by summing payments with that teamRef.
+ * Returns 0 if no payments exist for that team.
  */
 export async function totalForTeam(teamRef: string): Promise<number> {
-  const totalsPath = `${TOTALS_PREFIX}${teamRef}.json`;
-  const blob = await getBlobByPath(totalsPath);
-  if (!blob) return 0;
+  const blobs = await listAll(PAYMENTS_PREFIX);
+  let sum = 0;
 
-  const json = await fetchJson<{ totalCents: number }>(blob.url);
-  if (!json) return 0;
+  for (const b of blobs) {
+    const d = await readPayment(b);
+    if (!d?.teamRef || d.teamRef !== teamRef) continue;
+    if (!Number.isFinite(d.amountCents)) continue;
+    sum += d.amountCents;
+  }
 
-  const n = Number(json.totalCents ?? 0);
-  return Number.isFinite(n) ? n : 0;
+  return sum;
 }
