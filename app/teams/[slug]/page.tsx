@@ -5,6 +5,7 @@ import { getTeamBySlug } from "@/config/teams";
 import { Suspense } from "react";
 import { DonateInline } from "./DonateInline";
 import { totalsByTeam } from "@/lib/donationsStore";
+import { unstable_noStore as noStore } from "next/cache";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -40,6 +41,9 @@ export const generateMetadata = async ({ params }: TeamPageProps): Promise<Metad
 };
 
 const TeamPage = async ({ params, searchParams }: TeamPageProps) => {
+  // 🚫 Disable Next.js caching for this request path to ensure live totals
+  noStore();
+
   const { slug } = await params;
   const team = await getTeamBySlug(slug);
   if (!team) notFound();
