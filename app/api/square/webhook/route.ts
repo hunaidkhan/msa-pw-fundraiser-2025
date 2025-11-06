@@ -108,10 +108,18 @@ export async function POST(req: Request) {
   }
 
   const status = (payment.status ?? "").toUpperCase();
-  if (status !== "COMPLETED") {
-    console.log("[Square Webhook] Skipping non-completed payment:", status);
+  
+  // ✅ Accept both COMPLETED and APPROVED in all environments
+  // APPROVED = Sandbox successful payments
+  // COMPLETED = Production successful payments
+  const validStatuses = ["COMPLETED", "APPROVED"];
+  
+  if (!validStatuses.includes(status)) {
+    console.log("[Square Webhook] Skipping payment with status:", status);
     return NextResponse.json({ ok: true, skipped: `status=${status}` }, { status: 200 });
   }
+  
+  console.log("[Square Webhook] ✓ Processing successful payment with status:", status);
 
   const amountRaw = payment.amountMoney?.amount ?? 0;
   const amountCents =
