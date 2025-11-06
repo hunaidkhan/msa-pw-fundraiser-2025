@@ -1,3 +1,4 @@
+// app/api/square/webhook/route.ts
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { upsertDonation, type Donation } from "@/lib/donationsStore";
@@ -5,31 +6,15 @@ import { upsertDonation, type Donation } from "@/lib/donationsStore";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type SquarePaymentMoney = {
-  amount?: bigint | number | null;
-  currency?: string | null;
-};
-
-type SquarePayment = {
-  id: string;
-  status?: string;
-  amountMoney?: SquarePaymentMoney | null;
-  note?: string | null;
-  createdAt?: string | null;
-  receiptUrl?: string | null;
-  customerDetails?: { emailAddress?: string | null } | null;
-  orderId?: string | null;
-};
-
 type SquareWebhookEvent = {
   id?: string;
-  type?: string;
+  type?: string; // e.g. "payment.created"
   created_at?: string;
   data?: {
-    type?: string;
+    type?: string; // e.g. "payment"
     id?: string;
     object?: {
-      payment?: SquarePayment;
+      payment?: any; // raw payment object (snake_case from Square)
     };
   };
 };
@@ -37,18 +22,16 @@ type SquareWebhookEvent = {
 const SIGNATURE_KEY = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY ?? "";
 const WEBHOOK_URL   = process.env.SQUARE_WEBHOOK_URL ?? "";
 
-// ✅ FIXED: Parse the structured note we're now sending
+/** Parse team ref from `note` like "teamSlug=team-falcon" */
 function parseTeamRef(note?: string | null): string | null {
   if (!note) return null;
-  
-  // Match: "teamSlug=team-falcon" or "teamSlug=my-team-2"
   const match = note.match(/teamSlug=([^\s;]+)/i);
   const slug = match?.[1]?.trim();
-  
   console.log("[Webhook] Parsed team slug:", slug, "from note:", note);
   return slug || null;
 }
 
+/** Verify Square webhook HMAC signature (URL + rawBody, base64) */
 function verifySquareSignature(bodyRaw: string, headerSig: string | null): boolean {
   if (!headerSig || !SIGNATURE_KEY || !WEBHOOK_URL) return false;
   try {
@@ -59,6 +42,48 @@ function verifySquareSignature(bodyRaw: string, headerSig: string | null): boole
   } catch {
     return false;
   }
+}
+
+/** Normalize payment to camelCase while preserving raw blob for debugging */
+function normalizePayment(p: any) {
+  const amountMoney     = p?.amountMoney     ?? p?.amount_money     ?? null;
+  const totalMoney      = p?.totalMoney      ?? p?.total_money      ?? null;
+  const approvedMoney   = p?.approvedMoney   ?? p?.approved_money   ?? null;
+  const customerDetails = p?.customerDetails ?? p?.customer_details ?? null;
+
+  return {
+    id: p?.id ?? null,
+    status: p?.status ?? null,
+    note: p?.note ?? null,
+    createdAt: p?.createdAt ?? p?.created_at ?? null,
+    receiptUrl: p?.receiptUrl ?? p?.receipt_url ?? null,
+    customerDetails: customerDetails
+      ? { emailAddress: customerDetails.emailAddress ?? customerDetails.email_address ?? null }
+      : null,
+    orderId: p?.orderId ?? p?.order_id ?? null,
+    amountMoney,
+    totalMoney,
+    approvedMoney,
+    raw: p,
+  };
+}
+
+/** Extract integer cents from a Square money object or primitive */
+function toCents(x: any): number | null {
+  if (x == null) return null;
+
+  // If it's a money object, prefer its .amount
+  const v = typeof x === "object" && "amount" in x ? x.amount : x;
+
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  if (typeof v === "string") {
+    const n = Number.parseInt(v, 10);
+    return Number.isFinite(n) ? n : null;
+  }
+  // JSON won't give bigint; if it somehow does, handle it:
+  if (typeof v === "bigint") return Number(v);
+
+  return null;
 }
 
 export async function POST(req: Request) {
@@ -92,8 +117,6 @@ export async function POST(req: Request) {
   }
 
   const type = evt.type ?? evt.data?.type ?? "";
-  
-  // ✅ FIXED: Listen for payment.created (not payment.updated)
   if (!type.startsWith("payment.")) {
     console.log("[Square Webhook] Ignoring non-payment event:", type);
     return NextResponse.json({ ok: true, ignored: type }, { status: 200 });
@@ -101,68 +124,70 @@ export async function POST(req: Request) {
 
   console.log("[Square Webhook] Processing event:", type);
 
-  const payment: SquarePayment | undefined = evt.data?.object?.payment as any;
-  if (!payment?.id) {
+  const rawPayment = evt.data?.object?.payment as any;
+  if (!rawPayment?.id) {
     console.error("[Square Webhook] No payment in payload");
     return NextResponse.json({ ok: false, error: "no payment in payload" }, { status: 400 });
   }
 
-  // ✅ Log the full payment object in non-production for debugging
+  // Verbose logging in non-prod to inspect payload shape
   if (process.env.NODE_ENV !== "production") {
-    console.log("[Square Webhook] Full payment object:", JSON.stringify(payment, null, 2));
+    console.log("[Square Webhook] Full payment object:", JSON.stringify(rawPayment, null, 2));
   }
 
-  const status = (payment.status ?? "").toUpperCase();
-  
-  // ✅ Accept both COMPLETED and APPROVED in all environments
-  // APPROVED = Sandbox successful payments
-  // COMPLETED = Production successful payments
-  const validStatuses = ["COMPLETED", "APPROVED"];
-  
-  if (!validStatuses.includes(status)) {
+  const payment = normalizePayment(rawPayment);
+  const status = String(payment.status ?? "").toUpperCase();
+
+  // Sandbox often reports APPROVED; Prod reports COMPLETED
+  const validStatuses = new Set(["COMPLETED", "APPROVED"]);
+  if (!validStatuses.has(status)) {
     console.log("[Square Webhook] Skipping payment with status:", status);
     return NextResponse.json({ ok: true, skipped: `status=${status}` }, { status: 200 });
   }
-  
+
   console.log("[Square Webhook] ✓ Processing successful payment with status:", status);
 
-  // ✅ FIXED: Better amount parsing with logging
-  const amountRaw = payment.amountMoney?.amount;
-  console.log("[Square Webhook] Raw amount from Square:", amountRaw, "type:", typeof amountRaw);
-  
-  let amountCents = 0;
-  if (typeof amountRaw === "bigint") {
-    amountCents = Number(amountRaw);
-  } else if (typeof amountRaw === "number") {
-    amountCents = amountRaw;
-  } else if (typeof amountRaw === "string") {
-    // Sometimes Square sends it as a string
-    amountCents = parseInt(amountRaw, 10);
-  }
-  
-  console.log("[Square Webhook] Parsed amount in cents:", amountCents);
-  
+  // Prefer amountMoney; fall back to totalMoney/approvedMoney
+  let amountCents =
+    toCents(payment.amountMoney) ??
+    toCents(payment.totalMoney) ??
+    toCents(payment.approvedMoney) ??
+    0;
+
+  console.log("[Square Webhook] Parsed amount in cents:", amountCents, {
+    from: {
+      amountMoney: payment.amountMoney,
+      totalMoney: payment.totalMoney,
+      approvedMoney: payment.approvedMoney,
+    },
+  });
+
   if (!amountCents || amountCents <= 0) {
-    console.error("[Square Webhook] Invalid amount:", amountCents, "from raw:", amountRaw);
-    // Still process the payment but log the error
+    console.error("[Square Webhook] Invalid amountCents; refusing to persist donation.");
+    return NextResponse.json({ ok: false, error: "invalid amount" }, { status: 400 });
   }
 
   const teamRef = parseTeamRef(payment.note);
-  
   if (!teamRef) {
     console.warn("[Square Webhook] No team reference found in payment note:", payment.note);
     return NextResponse.json({ ok: true, skipped: "no teamRef" }, { status: 200 });
   }
 
+  const currency =
+    payment.amountMoney?.currency ??
+    payment.totalMoney?.currency ??
+    payment.approvedMoney?.currency ??
+    "CAD";
+
   const record: Donation = {
-    id: payment.id,
+    id: payment.id!,
     teamRef,
     amountCents,
-    currency: (payment.amountMoney?.currency ?? "CAD") as string,
+    currency,
     email: payment.customerDetails?.emailAddress ?? undefined,
     receiptUrl: payment.receiptUrl ?? undefined,
     createdAt: payment.createdAt ?? new Date().toISOString(),
-    raw: process.env.NODE_ENV === "production" ? undefined : payment,
+    raw: process.env.NODE_ENV === "production" ? undefined : payment.raw,
   };
 
   try {
@@ -170,10 +195,11 @@ export async function POST(req: Request) {
       id: record.id,
       teamRef: record.teamRef,
       amountCents: record.amountCents,
+      currency: record.currency,
     });
-    
+
     await upsertDonation(record);
-    
+
     console.log("[Square Webhook] ✅ Successfully processed donation");
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (e) {
