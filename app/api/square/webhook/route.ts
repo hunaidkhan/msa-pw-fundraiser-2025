@@ -201,9 +201,9 @@ export async function POST(req: Request) {
 
     await upsertDonation(record);
 
-    // Update the pre-generated totals blob
+    // Update the pre-generated totals blob (teamRef is guaranteed non-null here)
     console.log("[Square Webhook] Updating team totals...");
-    await incrementTeamTotal(record.teamRef, record.amountCents);
+    await incrementTeamTotal(teamRef, record.amountCents);
 
     console.log("[Square Webhook] ✅ Successfully processed donation");
     return NextResponse.json({ ok: true }, { status: 200 });
