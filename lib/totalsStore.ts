@@ -6,21 +6,63 @@ export interface TeamTotals {
   [teamRef: string]: number; // amount in cents
 }
 
+// In-memory cache for the blob URL (stays cached until process restarts)
+let cachedTotalsUrl: string | null = null;
+let lastCacheTime = 0;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 /**
- * Fetches the current totals blob.
- * Uses simple blob operation (URL fetch) which benefits from caching.
+ * Gets the totals blob URL, with in-memory caching to reduce list() calls.
  */
-export async function getTotals(): Promise<TeamTotals> {
+async function getTotalsUrl(): Promise<string | null> {
+  const now = Date.now();
+
+  // Return cached URL if still valid
+  if (cachedTotalsUrl && (now - lastCacheTime) < CACHE_TTL) {
+    return cachedTotalsUrl;
+  }
+
   try {
-    // List to get the URL (limit 1, so minimal cost)
+    // List to get the URL (only when cache expires)
     const { blobs } = await list({ prefix: TOTALS_PATH, limit: 1 });
 
     if (!blobs.length) {
+      return null;
+    }
+
+    // Cache the URL
+    cachedTotalsUrl = blobs[0].url;
+    lastCacheTime = now;
+
+    return cachedTotalsUrl;
+  } catch (error) {
+    console.error("Error listing totals blob:", error);
+    return null;
+  }
+}
+
+/**
+ * Invalidates the cached totals URL (call after writing new totals).
+ */
+function invalidateTotalsCache(): void {
+  cachedTotalsUrl = null;
+  lastCacheTime = 0;
+}
+
+/**
+ * Fetches the current totals blob.
+ * Uses in-memory URL caching to minimize list() operations.
+ */
+export async function getTotals(): Promise<TeamTotals> {
+  try {
+    const url = await getTotalsUrl();
+
+    if (!url) {
       return {};
     }
 
-    // Fetch by URL - this is a simple operation and will be cached
-    const response = await fetch(blobs[0].url, {
+    // Fetch by URL - this is a simple operation
+    const response = await fetch(url, {
       cache: "no-store" // Force fresh data for real-time updates
     });
 
