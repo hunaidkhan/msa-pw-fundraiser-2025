@@ -231,12 +231,24 @@ export async function addTeam(input: AddTeamInput): Promise<Team> {
     goal = input.goal;
   }
 
-  const existingTeams = await getAllTeams();
-  if (teamNameExists(name, existingTeams)) {
+  // Load dynamic teams once (will also be used to build the full team list)
+  const dynamicTeams = await loadDynamicTeams();
+
+  // Build the full team list by merging with BASE_TEAMS
+  const allTeams = [...BASE_TEAMS];
+  for (const team of dynamicTeams) {
+    if (!allTeams.find(t => t.slug === team.slug)) {
+      allTeams.push(team);
+    }
+  }
+
+  // Check for duplicate name
+  if (teamNameExists(name, allTeams)) {
     throw new TeamValidationError("A team with this name already exists.");
   }
 
-  const existingSlugs = new Set(existingTeams.map((team) => team.slug));
+  // Generate unique slug
+  const existingSlugs = new Set(allTeams.map((team) => team.slug));
   const baseSlug = slugify(name);
   const uniqueSlug = slugifyUnique(baseSlug, existingSlugs);
 
@@ -251,7 +263,7 @@ export async function addTeam(input: AddTeamInput): Promise<Team> {
     contactEmail: email,
   };
 
-  const dynamicTeams = await loadDynamicTeams();
+  // Add new team to dynamic teams and save
   dynamicTeams.push(newTeam);
   await saveDynamicTeams(dynamicTeams);
 

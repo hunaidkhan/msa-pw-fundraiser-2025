@@ -37,13 +37,13 @@ export async function POST(request: Request) {
   try {
     const team = await addTeam({ name, email, goal });
     
-    // ✨ KEY ADDITION: Revalidate relevant paths immediately
+    // ✨ Revalidate only the team list pages (new team page will be generated on first visit)
     try {
-      // Revalidate the teams index
+      // Revalidate the teams index and explore pages so new team appears in lists
       revalidatePath("/teams");
       revalidatePath("/teams/explore");
-      // Revalidate the new team's page
-      revalidatePath(`/teams/${team.slug}`);
+      // Note: Not revalidating /teams/${slug} since it doesn't exist yet
+      // and will be dynamically generated on first visit
     } catch (revalidateError) {
       // Log but don't fail - page will still be accessible via dynamic route
       console.warn("Revalidation failed:", revalidateError);
