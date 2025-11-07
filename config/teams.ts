@@ -63,14 +63,58 @@ const BASE_TEAMS: Team[] = [
 
 const FILE_NAME = "teams.json"; // deterministic blob key
 
+// In-memory cache for the teams blob URL (stays cached until process restarts)
+let cachedTeamsUrl: string | null = null;
+let lastCacheTime = 0;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Gets the teams blob URL, with in-memory caching to reduce list() calls.
+ */
+async function getTeamsUrl(): Promise<string | null> {
+  const now = Date.now();
+
+  // Return cached URL if still valid
+  if (cachedTeamsUrl && (now - lastCacheTime) < CACHE_TTL) {
+    return cachedTeamsUrl;
+  }
+
+  try {
+    // List to get the URL (only when cache expires)
+    const { blobs } = await list({ prefix: FILE_NAME, limit: 1 });
+
+    if (!blobs.length) {
+      return null;
+    }
+
+    // Cache the URL
+    cachedTeamsUrl = blobs[0].url;
+    lastCacheTime = now;
+
+    return cachedTeamsUrl;
+  } catch (error) {
+    console.error("Error listing teams blob:", error);
+    return null;
+  }
+}
+
+/**
+ * Invalidates the cached teams URL (call after writing new teams).
+ */
+function invalidateTeamsCache(): void {
+  cachedTeamsUrl = null;
+  lastCacheTime = 0;
+}
+
 export async function loadDynamicTeams(): Promise<Team[]> {
   try {
-    const { blobs } = await list({ prefix: FILE_NAME, limit: 1 });
-    if (!blobs.length) {
+    const url = await getTeamsUrl();
+
+    if (!url) {
       return [];
     }
 
-    const response = await fetch(blobs[0].url, { cache: "no-store" });
+    const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) {
       return [];
     }
@@ -138,6 +182,9 @@ export async function saveDynamicTeams(teams: Team[]): Promise<void> {
     contentType: "application/json",
     cacheControlMaxAge: 0
   });
+
+  // Invalidate cache after writing new teams
+  invalidateTeamsCache();
 }
 
 export function slugify(value: string): string {
