@@ -1,5 +1,5 @@
 // lib/donationsStore.ts
-import { list, put, del } from "@vercel/blob";
+import { put, del } from "@vercel/blob";
 import { getTotals, getTeamTotal } from "./totalsStore";
 
 /**
@@ -23,44 +23,9 @@ export type Donation = {
 const ROOT_PREFIX = "donations";
 const PAYMENTS_PREFIX = `${ROOT_PREFIX}/payments/`; // donations/payments/{paymentId}.json
 
-// Helper: derive the blob item array type from list()
-type ListBlobResult = Awaited<ReturnType<typeof list>>;
-type BlobItem = ListBlobResult["blobs"][number];
-
 // ---------- Tiny utils ----------
-
-async function fetchJson<T = unknown>(url: string): Promise<T | null> {
-  try {
-    // Force freshness (avoid CDN/route cache)
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) return null;
-    return (await res.json()) as T;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * List all blobs for a prefix (handles pagination).
- */
-async function listAll(prefix: string): Promise<BlobItem[]> {
-  const items: BlobItem[] = [];
-  let cursor: string | undefined = undefined;
-
-  do {
-    const page: ListBlobResult = await list({ prefix, cursor });
-    if (page.blobs?.length) items.push(...page.blobs);
-    cursor = page.cursor ?? undefined;
-  } while (cursor);
-
-  return items;
-}
-
-/** Read one payment JSON by blob item (fresh). */
-async function readPayment(b: BlobItem): Promise<Donation | null> {
-  if (!b.pathname.endsWith(".json")) return null;
-  return (await fetchJson<Donation>(b.url)) ?? null;
-}
+// Note: Previous listAll() helper removed as it was unused.
+// Migration scripts define their own listAll() when needed.
 
 // ---------- Public API (payments are the source of truth) ----------
 
