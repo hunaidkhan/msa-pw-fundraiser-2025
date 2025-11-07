@@ -1,4 +1,5 @@
 import { put, list } from "@vercel/blob";
+import { cache } from "react";
 
 const TOTALS_PATH = "donations/totals.json";
 
@@ -13,8 +14,9 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Gets the totals blob URL, with in-memory caching to reduce list() calls.
+ * Wrapped with React cache() for request-level deduplication.
  */
-async function getTotalsUrl(): Promise<string | null> {
+const getTotalsUrl = cache(async (): Promise<string | null> => {
   const now = Date.now();
 
   // Return cached URL if still valid
@@ -39,7 +41,7 @@ async function getTotalsUrl(): Promise<string | null> {
     console.error("Error listing totals blob:", error);
     return null;
   }
-}
+});
 
 /**
  * Invalidates the cached totals URL (call after writing new totals).

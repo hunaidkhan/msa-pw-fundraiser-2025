@@ -1,4 +1,5 @@
 import { list, put } from "@vercel/blob";
+import { cache } from "react";
 
 export type Team = {
   id: string;
@@ -70,8 +71,9 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Gets the teams blob URL, with in-memory caching to reduce list() calls.
+ * Wrapped with React cache() for request-level deduplication.
  */
-async function getTeamsUrl(): Promise<string | null> {
+const getTeamsUrl = cache(async (): Promise<string | null> => {
   const now = Date.now();
 
   // Return cached URL if still valid
@@ -96,7 +98,7 @@ async function getTeamsUrl(): Promise<string | null> {
     console.error("Error listing teams blob:", error);
     return null;
   }
-}
+});
 
 /**
  * Invalidates the cached teams URL (call after writing new teams).
