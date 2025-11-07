@@ -64,35 +64,32 @@ const BASE_TEAMS: Team[] = [
 
 const FILE_NAME = "teams.json"; // deterministic blob key
 
-// In-memory cache for the teams blob URL (stays cached until process restarts)
+// In-memory cache for the teams blob URL
+// Once set from put(), this URL is permanent (deterministic blob key)
 let cachedTeamsUrl: string | null = null;
-let lastCacheTime = 0;
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 /**
- * Gets the teams blob URL, with in-memory caching to reduce list() calls.
+ * Gets the teams blob URL, with in-memory caching to eliminate list() calls.
+ * URL is captured from put() operations and cached permanently.
+ * Only falls back to list() if URL not yet cached (first read before any write).
  * Wrapped with React cache() for request-level deduplication.
  */
 const getTeamsUrl = cache(async (): Promise<string | null> => {
-  const now = Date.now();
-
-  // Return cached URL if still valid
-  if (cachedTeamsUrl && (now - lastCacheTime) < CACHE_TTL) {
+  // Return cached URL if available (no TTL needed - blob key is deterministic)
+  if (cachedTeamsUrl) {
     return cachedTeamsUrl;
   }
 
   try {
-    // List to get the URL (only when cache expires)
+    // Fallback: list to get the URL (only on first read before any write)
     const { blobs } = await list({ prefix: FILE_NAME, limit: 1 });
 
     if (!blobs.length) {
       return null;
     }
 
-    // Cache the URL
+    // Cache the URL permanently
     cachedTeamsUrl = blobs[0].url;
-    lastCacheTime = now;
-
     return cachedTeamsUrl;
   } catch (error) {
     console.error("Error listing teams blob:", error);
@@ -101,11 +98,10 @@ const getTeamsUrl = cache(async (): Promise<string | null> => {
 });
 
 /**
- * Invalidates the cached teams URL (call after writing new teams).
+ * Sets the cached teams URL from a write operation.
  */
-function invalidateTeamsCache(): void {
-  cachedTeamsUrl = null;
-  lastCacheTime = 0;
+function setCachedTeamsUrl(url: string): void {
+  cachedTeamsUrl = url;
 }
 
 export async function loadDynamicTeams(): Promise<Team[]> {
@@ -177,7 +173,7 @@ function sanitizeTeam(value: unknown): Team | undefined {
 }
 
 export async function saveDynamicTeams(teams: Team[]): Promise<void> {
-  await put(FILE_NAME, JSON.stringify(teams, null, 2), {
+  const blob = await put(FILE_NAME, JSON.stringify(teams, null, 2), {
     access: "public",
     addRandomSuffix: false,
     allowOverwrite:true,
@@ -185,8 +181,8 @@ export async function saveDynamicTeams(teams: Team[]): Promise<void> {
     cacheControlMaxAge: 0
   });
 
-  // Invalidate cache after writing new teams
-  invalidateTeamsCache();
+  // Cache the blob URL from the write operation (eliminates future list() calls)
+  setCachedTeamsUrl(blob.url);
 }
 
 export function slugify(value: string): string {
