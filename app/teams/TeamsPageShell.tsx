@@ -58,43 +58,46 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
         <main className="relative flex-1 overflow-hidden">
           {/* Animated background orbs with Palestine colors */}
           <m.div
-            className="pointer-events-none absolute -left-24 top-16 h-72 w-72 rounded-full bg-[#007a3d]/30 blur-3xl"
+            className="pointer-events-none absolute -left-24 top-20 h-72 w-72 rounded-full bg-[#007a3d]/30 blur-3xl"
             animate={{
-              scale: [1, 1.2, 1],
-              x: [0, 30, 0],
-              y: [0, 20, 0],
-              opacity: [0.3, 0.5, 0.3],
-            }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          />
-          <m.div
-            className="pointer-events-none absolute -right-20 bottom-10 h-80 w-80 rounded-full bg-[#ce1126]/30 blur-3xl"
-            animate={{
-              scale: [1, 1.3, 1],
-              x: [0, -40, 0],
-              y: [0, -30, 0],
-              opacity: [0.3, 0.5, 0.3],
+              scale: [1, 1.15, 1],
+              x: [0, 20, 0],
+              y: [0, 15, 0],
+              opacity: [0.3, 0.4, 0.3],
             }}
             transition={{
               duration: 10,
               repeat: Infinity,
               ease: "easeInOut",
+              times: [0, 0.5, 1],
             }}
           />
           <m.div
-            className="pointer-events-none absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#000000]/10 blur-3xl"
+            className="pointer-events-none absolute -right-20 top-32 h-80 w-80 rounded-full bg-[#ce1126]/30 blur-3xl"
             animate={{
-              scale: [1, 1.5, 1],
-              opacity: [0.1, 0.2, 0.1],
+              scale: [1, 1.2, 1],
+              x: [0, -25, 0],
+              y: [0, 20, 0],
+              opacity: [0.3, 0.4, 0.3],
             }}
             transition={{
               duration: 12,
               repeat: Infinity,
               ease: "easeInOut",
+              times: [0, 0.5, 1],
+            }}
+          />
+          <m.div
+            className="pointer-events-none absolute left-1/3 top-1/3 h-80 w-80 rounded-full bg-[#000000]/8 blur-3xl"
+            animate={{
+              scale: [1, 1.3, 1],
+              opacity: [0.08, 0.15, 0.08],
+            }}
+            transition={{
+              duration: 15,
+              repeat: Infinity,
+              ease: "easeInOut",
+              times: [0, 0.5, 1],
             }}
           />
           {/* Flash of Palestine colors on load */}
@@ -102,7 +105,7 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
             className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#007a3d]/20 via-[#000000]/10 to-[#ce1126]/20"
             initial={{ opacity: 0 }}
             animate={{ opacity: [0, 0.6, 0] }}
-            transition={{ duration: 1.5, ease: "easeInOut" }}
+            transition={{ duration: 1.8, ease: "easeInOut" }}
           />
 
           <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-16 px-6 py-16">
