@@ -112,7 +112,7 @@ export async function loadDynamicTeams(): Promise<Team[]> {
       return [];
     }
 
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetch(url, { next: { revalidate: 60 } });
     if (!response.ok) {
       return [];
     }

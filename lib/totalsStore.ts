@@ -61,7 +61,7 @@ export async function getTotals(): Promise<TeamTotals> {
 
     // Fetch by URL - this is a simple operation
     const response = await fetch(url, {
-      cache: "no-store" // Force fresh data for real-time updates
+      next: { revalidate: 60 } // Align with page-level ISR strategy
     });
 
     if (!response.ok) {
