@@ -52,12 +52,58 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
 
   return (
     <LazyMotion features={domAnimation}>
-      <div className="flex min-h-screen flex-col bg-gradient-to-br from-emerald-50 via-white to-rose-50">
+      <div className="flex min-h-screen flex-col bg-gradient-to-br from-emerald-100 via-white to-rose-100">
         <SiteHeader onDonateClick={() => setIsDonateOpen(true)} />
 
         <main className="relative flex-1 overflow-hidden">
-          <div className="pointer-events-none absolute -left-24 top-16 h-72 w-72 rounded-full bg-[#007a3d]/20 blur-3xl" />
-          <div className="pointer-events-none absolute -right-20 bottom-10 h-80 w-80 rounded-full bg-[#ce1126]/20 blur-3xl" />
+          {/* Animated background orbs with Palestine colors */}
+          <m.div
+            className="pointer-events-none absolute -left-24 top-16 h-72 w-72 rounded-full bg-[#007a3d]/30 blur-3xl"
+            animate={{
+              scale: [1, 1.2, 1],
+              x: [0, 30, 0],
+              y: [0, 20, 0],
+              opacity: [0.3, 0.5, 0.3],
+            }}
+            transition={{
+              duration: 8,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+          <m.div
+            className="pointer-events-none absolute -right-20 bottom-10 h-80 w-80 rounded-full bg-[#ce1126]/30 blur-3xl"
+            animate={{
+              scale: [1, 1.3, 1],
+              x: [0, -40, 0],
+              y: [0, -30, 0],
+              opacity: [0.3, 0.5, 0.3],
+            }}
+            transition={{
+              duration: 10,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+          <m.div
+            className="pointer-events-none absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#000000]/10 blur-3xl"
+            animate={{
+              scale: [1, 1.5, 1],
+              opacity: [0.1, 0.2, 0.1],
+            }}
+            transition={{
+              duration: 12,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+          {/* Flash of Palestine colors on load */}
+          <m.div
+            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#007a3d]/20 via-[#000000]/10 to-[#ce1126]/20"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 0.6, 0] }}
+            transition={{ duration: 1.5, ease: "easeInOut" }}
+          />
 
           <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-16 px-6 py-16">
             <header className="grid gap-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-center">
