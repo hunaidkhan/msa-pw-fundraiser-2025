@@ -97,13 +97,6 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
               ease: "linear",
             }}
           />
-          {/* Flash of Palestine colors on load */}
-          <m.div
-            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#007a3d]/20 via-[#000000]/10 to-[#ce1126]/20"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 0.6, 0] }}
-            transition={{ duration: 1.8, ease: "easeInOut" }}
-          />
 
           <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-16 px-6 py-16">
             <header className="grid gap-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-center">
