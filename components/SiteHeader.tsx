@@ -38,7 +38,7 @@ export function SiteHeader({ onDonateClick }: SiteHeaderProps) {
           </m.div>
 
           <nav className="hidden items-center gap-6 text-sm font-medium text-slate-700 md:flex">
-            <a className="hover:text-slate-950" href="#impact">
+            {/* <a className="hover:text-slate-950" href="#impact">
               Impact
             </a>
             <a className="hover:text-slate-950" href="#program">
@@ -46,7 +46,7 @@ export function SiteHeader({ onDonateClick }: SiteHeaderProps) {
             </a>
             <a className="hover:text-slate-950" href="#faq">
               FAQ
-            </a>
+            </a> */}
           </nav>
 
           <m.button
