@@ -142,16 +142,16 @@ export function DonateModal({ open, onOpenChange }: DonateModalProps) {
                 exit={{ opacity: 0, scale: 0.9, y: 24 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
               >
-                <div className="relative w-full max-w-lg rounded-3xl border border-black/10 bg-white p-8 shadow-2xl">
-                  <Dialog.Title className="text-2xl font-semibold text-slate-900">
+                <div className="relative w-full max-w-lg rounded-3xl border border-black/10 bg-white p-8 shadow-2xl dark:border-white/10 dark:bg-zinc-900">
+                  <Dialog.Title className="text-2xl font-semibold text-slate-900 dark:text-white">
                     Fuel urgent relief for Palestine
                   </Dialog.Title>
-                  <Dialog.Description className="mt-2 text-sm text-slate-600">
+                  <Dialog.Description className="mt-2 text-sm text-slate-600 dark:text-zinc-300">
                     100% of online gifts are routed to vetted partners delivering winter kits, medical aid, and community resilience programming.
                   </Dialog.Description>
                   <button
                     type="button"
-                    className="absolute right-5 top-5 rounded-full bg-slate-100 p-2 text-slate-500 transition hover:text-slate-900"
+                    className="absolute right-5 top-5 rounded-full bg-slate-100 p-2 text-slate-500 transition hover:text-slate-900 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:text-white"
                     onClick={() => handleOpenChange(false)}
                     aria-label="Close"
                   >
@@ -159,12 +159,12 @@ export function DonateModal({ open, onOpenChange }: DonateModalProps) {
                   </button>
                   <form className="mt-6 space-y-4" onSubmit={handleSubmit} noValidate>
                     <div>
-                      <label className="text-sm font-semibold text-slate-700" htmlFor="donate-name">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-zinc-200" htmlFor="donate-name">
                         Full name
                       </label>
                       <input
                         id="donate-name"
-                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm focus:border-[#007a3d] focus:outline-none focus:ring-2 focus:ring-[#007a3d]/40"
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm focus:border-[#007a3d] focus:outline-none focus:ring-2 focus:ring-[#007a3d]/40 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                         placeholder="Amina Khalil"
                         value={form.name}
                         onChange={(event) =>
@@ -177,13 +177,13 @@ export function DonateModal({ open, onOpenChange }: DonateModalProps) {
                       ) : null}
                     </div>
                     <div>
-                      <label className="text-sm font-semibold text-slate-700" htmlFor="donate-email">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-zinc-200" htmlFor="donate-email">
                         Email address
                       </label>
                       <input
                         id="donate-email"
                         type="email"
-                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm focus:border-[#007a3d] focus:outline-none focus:ring-2 focus:ring-[#007a3d]/40"
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm focus:border-[#007a3d] focus:outline-none focus:ring-2 focus:ring-[#007a3d]/40 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                         placeholder="you@example.com"
                         value={form.email}
                         onChange={(event) =>
@@ -196,13 +196,13 @@ export function DonateModal({ open, onOpenChange }: DonateModalProps) {
                       ) : null}
                     </div>
                     <div>
-                      <label className="text-sm font-semibold text-slate-700" htmlFor="donate-amount">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-zinc-200" htmlFor="donate-amount">
                         Donation amount (USD)
                       </label>
                       <input
                         id="donate-amount"
                         inputMode="decimal"
-                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm focus:border-[#007a3d] focus:outline-none focus:ring-2 focus:ring-[#007a3d]/40"
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm focus:border-[#007a3d] focus:outline-none focus:ring-2 focus:ring-[#007a3d]/40 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                         placeholder="100"
                         value={form.amount}
                         onChange={(event) =>
@@ -215,12 +215,12 @@ export function DonateModal({ open, onOpenChange }: DonateModalProps) {
                       ) : null}
                     </div>
                     <div>
-                      <label className="text-sm font-semibold text-slate-700" htmlFor="donate-message">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-zinc-200" htmlFor="donate-message">
                         Message to organizers (optional)
                       </label>
                       <textarea
                         id="donate-message"
-                        className="mt-1 h-24 w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm focus:border-[#007a3d] focus:outline-none focus:ring-2 focus:ring-[#007a3d]/40"
+                        className="mt-1 h-24 w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm focus:border-[#007a3d] focus:outline-none focus:ring-2 focus:ring-[#007a3d]/40 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                         placeholder="Share a note of solidarity or a dedication."
                         value={form.message}
                         onChange={(event) =>
@@ -230,7 +230,7 @@ export function DonateModal({ open, onOpenChange }: DonateModalProps) {
                       />
                     </div>
                     <motion.div
-                      className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600"
+                      className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:bg-zinc-800/70 dark:text-zinc-300"
                       layout
                       transition={{ type: "spring", stiffness: 120, damping: 18 }}
                     >
