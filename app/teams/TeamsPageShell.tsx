@@ -51,7 +51,7 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-emerald-50 via-white to-rose-50">
-      <SiteHeader onDonateClick={() => setIsDonateOpen(true)} />
+      <SiteHeader />
 
       <main className="relative flex-1 overflow-hidden">
         <div className="pointer-events-none absolute -left-24 top-16 h-72 w-72 rounded-full bg-[#007a3d]/20 blur-3xl" />
