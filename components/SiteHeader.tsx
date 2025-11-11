@@ -27,7 +27,6 @@ export function SiteHeader({ onDonateClick }: SiteHeaderProps) {
                 fill
                 sizes="80px"
                 className="object-cover"
-
               />
             </div>
             <div className="leading-tight">

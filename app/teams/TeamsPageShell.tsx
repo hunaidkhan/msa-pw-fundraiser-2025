@@ -114,7 +114,7 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, ease: "easeOut" }}
                 >
-                  Winter 2025 Solidarity Drive
+                  PW 2025 Fundraising Campaign
                 </m.p>
 
                 <m.h1
@@ -123,7 +123,7 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.7, ease: "easeOut", delay: 0.1 }}
                 >
-                  Meet the teams powering relief, resilience, and student solidarity.
+                  Meet the teams powering this week's fundraising efforts.
                 </m.h1>
 
                 <m.p
@@ -132,7 +132,7 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
                 >
-                  Browse active campus and community crews organizing for Palestine. Each team channels mutual aid, cultural programming, and advocacy into tangible relief. Join their momentum or start a new squad of your own.
+                  PW is a week-long initiative dedicated to preserving Palestine’s history, condemning present-day injustices, and spreading hope for a blessed, free future. We seek to educate, fundraise, and spread the message of Palestine across a campus that has fought to silence it.
                 </m.p>
 
                 <m.div
@@ -164,7 +164,7 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
             >
               <div className="absolute -top-6 right-6 inline-flex items-center gap-2 rounded-full bg-[#007a3d] px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white shadow">
                 <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-white" />
-                Live impact
+                Leaderboard
               </div>
 
               <div className="space-y-5 text-sm">
@@ -237,9 +237,9 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h2 className="text-3xl font-semibold text-slate-950">Browse all teams</h2>
-                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">
+                {/* <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">
                   Discover the breadth of mutual aid efforts across campuses, community centers, and diaspora partners.
-                </p>
+                </p> */}
               </div>
               <Link
                 href="/teams/register"
