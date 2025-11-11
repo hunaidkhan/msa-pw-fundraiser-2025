@@ -168,13 +168,9 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
                     const progress = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
 
                     return (
-                      <m.div
+                      <div
                         key={team.id}
                         className="rounded-2xl border border-slate-100 bg-white/80 p-5 shadow"
-                        initial={{ opacity: 0, y: 24 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true, amount: 0.6 }}
-                        transition={{ duration: 0.5, ease: "easeOut" }}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
@@ -196,7 +192,7 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
                         <p className="mt-2 text-xs text-slate-500">
                           ${raised.toLocaleString()} raised of {goal > 0 ? `$${goal.toLocaleString()}` : "an open goal"}
                         </p>
-                      </m.div>
+                      </div>
                     );
                   })
                 ) : (
@@ -208,44 +204,18 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
             </m.aside>
           </header>
 
-          <m.section
-            className="grid gap-6 sm:grid-cols-3"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.3 }}
-            variants={{
-              hidden: { opacity: 0, y: 32 },
-              visible: {
-                opacity: 1,
-                y: 0,
-                transition: {
-                  staggerChildren: 0.1,
-                  duration: 0.5,
-                  ease: "easeOut",
-                },
-              },
-            }}
-          >
-            <m.div
-              className="rounded-3xl border border-slate-200 bg-white px-6 py-5 text-sm shadow-sm"
-              variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } }}
-            >
+          <section className="grid gap-6 sm:grid-cols-3">
+            <div className="rounded-3xl border border-slate-200 bg-white px-6 py-5 text-sm shadow-sm">
               <dt className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Active teams</dt>
               <dd className="mt-2 text-2xl font-semibold text-slate-900">{teams.length}</dd>
-            </m.div>
-            <m.div
-              className="rounded-3xl border border-slate-200 bg-white px-6 py-5 text-sm shadow-sm"
-              variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } }}
-            >
+            </div>
+            <div className="rounded-3xl border border-slate-200 bg-white px-6 py-5 text-sm shadow-sm">
               <dt className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Collected so far</dt>
               <dd className="mt-2 text-2xl font-semibold text-slate-900">
                 ${totalRaised.toLocaleString()}
               </dd>
-            </m.div>
-            <m.div
-              className="rounded-3xl border border-slate-200 bg-white px-6 py-5 text-sm shadow-sm"
-              variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } }}
-            >
+            </div>
+            <div className="rounded-3xl border border-slate-200 bg-white px-6 py-5 text-sm shadow-sm">
               <dt className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Campaign progress</dt>
               <dd className="mt-2 text-2xl font-semibold text-slate-900">
                 {overallProgress !== null ? `${overallProgress}%` : "—"}
@@ -253,17 +223,10 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
               <p className="mt-1 text-xs text-slate-500">
                 {totalGoal > 0 ? `of $${totalGoal.toLocaleString()} shared goal` : "Open-ended solidarity"}
               </p>
-            </m.div>
-          </m.section>
+            </div>
+          </section>
 
-          <m.section
-            id="teams"
-            className="space-y-6"
-            initial={{ opacity: 0, y: 32 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.2 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-          >
+          <section id="teams" className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h2 className="text-3xl font-semibold text-slate-950">Browse all teams</h2>
@@ -284,7 +247,7 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
                 <TeamCard key={team.id} team={team} />
               ))}
             </div>
-          </m.section>
+          </section>
         </div>
       </main>
 
