@@ -147,12 +147,13 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
                   >
                     Start a team
                   </Link>
-                  <Link
-                    href="/teams/explore"
+                  <button
+                    type="button"
+                    onClick={scrollToTeams}
                     className="inline-flex items-center justify-center rounded-full border border-slate-900/15 bg-white px-6 py-3 text-sm font-semibold text-slate-900 shadow transition hover:border-slate-900/30"
                   >
                     Donate to a team
-                  </Link>
+                  </button>
                 </m.div>
               </div>
 
