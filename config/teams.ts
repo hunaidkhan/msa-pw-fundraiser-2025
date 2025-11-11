@@ -37,8 +37,8 @@ const BASE_TEAMS: Team[] = [
     description:
       "Supporting urgent relief and sustainable community programs across Palestine.",
     logoUrl: "/logos/falcon.svg",
-    fundraisingGoal: 50000,
-    fundraisingRaised: 23500,
+    fundraisingGoal: 0,
+    fundraisingRaised: 0,
   },
   {
     id: "team-phoenix",
@@ -47,8 +47,8 @@ const BASE_TEAMS: Team[] = [
     description:
       "Rallying global allies to fund medical aid and trauma counseling for families.",
     logoUrl: "/logos/phoenix.svg",
-    fundraisingGoal: 65000,
-    fundraisingRaised: 41200,
+    fundraisingGoal: 0,
+    fundraisingRaised: 0,
   },
   {
     id: "team-lion",
@@ -57,8 +57,8 @@ const BASE_TEAMS: Team[] = [
     description:
       "Investing in youth empowerment, education, and rebuilding initiatives in Gaza.",
     logoUrl: "/logos/lion.svg",
-    fundraisingGoal: 80000,
-    fundraisingRaised: 58950,
+    fundraisingGoal: 0,
+    fundraisingRaised: 0,
   },
 ];
 
