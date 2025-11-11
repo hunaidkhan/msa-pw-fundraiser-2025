@@ -3,8 +3,6 @@
 import { ChangeEvent, FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import DonateModal from "@/components/DonateModal";
-import SiteFooter from "@/components/SiteFooter";
 import SiteHeader from "@/components/SiteHeader";
 
 type FormState = {
@@ -30,7 +28,6 @@ export default function RegisterTeamPage() {
   const [submissionPhase, setSubmissionPhase] = useState<
     "idle" | "registering" | "preparing"
   >("idle");
-  const [isDonateOpen, setIsDonateOpen] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [pendingTeamSlug, setPendingTeamSlug] = useState<string | null>(null);
 
@@ -194,7 +191,7 @@ export default function RegisterTeamPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-emerald-50 via-white to-rose-50 font-sans">
-      <SiteHeader onDonateClick={() => setIsDonateOpen(true)} />
+      <SiteHeader />
 
       <main className="relative flex flex-1 items-center justify-center px-6 py-16">
         <div className="absolute -left-24 top-16 h-64 w-64 rounded-full bg-[#007a3d]/20 blur-3xl" aria-hidden="true" />
@@ -345,8 +342,6 @@ export default function RegisterTeamPage() {
         </div>
       </main>
 
-      {/* <SiteFooter onDonateClick={() => setIsDonateOpen(true)} /> */}
-      <DonateModal open={isDonateOpen} onOpenChange={setIsDonateOpen} />
     </div>
   );
 }
