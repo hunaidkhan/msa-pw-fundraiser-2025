@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 
-import DonateModal from "@/components/DonateModal";
 import SiteHeader from "@/components/SiteHeader";
 import type { Team } from "@/config/teams";
 import { TeamCard } from "@/app/components/TeamCard";
@@ -13,8 +12,6 @@ type TeamsPageShellProps = {
 };
 
 export function TeamsPageShell({ teams }: TeamsPageShellProps) {
-  const [isDonateOpen, setIsDonateOpen] = useState(false);
-
   const { totalRaised, totalGoal, overallProgress } = useMemo(() => {
     const totals = teams.reduce(
       (accumulator, team) => {
@@ -50,8 +47,8 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-emerald-50 via-white to-rose-50">
-      <SiteHeader onDonateClick={() => setIsDonateOpen(true)} />
+    <div id="teamshell" className="flex min-h-screen flex-col bg-gradient-to-br from-emerald-50 via-white to-rose-50">
+      <SiteHeader />
 
       <main className="relative flex-1 overflow-hidden">
         <div className="pointer-events-none absolute -left-24 top-16 h-72 w-72 rounded-full bg-[#007a3d]/20 blur-3xl" />
@@ -184,8 +181,6 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
           </section>
         </div>
       </main>
-
-      <DonateModal open={isDonateOpen} onOpenChange={setIsDonateOpen} />
     </div>
   );
 }
