@@ -47,7 +47,7 @@ export default function HomePage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, ease: "easeOut" }}
                 >
-                  Winter 2025 Solidarity Drive
+                  Palestine Week 2025
                 </m.p>
 
                 <m.h1

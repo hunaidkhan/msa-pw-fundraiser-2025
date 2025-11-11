@@ -20,11 +20,11 @@ export const TeamCard = ({ team }: TeamCardProps) => {
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">{team.description}</p>
           ) : null}
         </div>
-        {team.logoUrl ? (
+        {/* {team.logoUrl ? (
           <span className="relative inline-flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-600/10">
             <Image src={team.logoUrl} alt="" width={48} height={48} className="h-8 w-8 object-contain" />
           </span>
-        ) : null}
+        ) : null} */}
       </div>
 
       <div className="space-y-3">

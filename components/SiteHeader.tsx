@@ -1,10 +1,12 @@
 "use client";
 
-import { LazyMotion, domAnimation, m } from "framer-motion";
+import Image from "next/image";
+import   { LazyMotion, domAnimation, m } from "framer-motion";
 
 type SiteHeaderProps = {
   onDonateClick?: () => void;
 };
+
 
 export function SiteHeader({ onDonateClick }: SiteHeaderProps) {
   return (
@@ -17,15 +19,21 @@ export function SiteHeader({ onDonateClick }: SiteHeaderProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#007a3d] text-lg font-bold text-white shadow-md">
-              MSA
+            {/* Replace MSA circle with actual logo */}
+            <div className="relative h-10 w-25">
+              <Image
+                src="/MSAUofAlogo.webp" // ← place your logo in /public/msa-logo.webp
+                alt="MSA Logo"
+                fill
+                sizes="80px"
+                className="object-cover"
+
+              />
             </div>
             <div className="leading-tight">
-              <p className="text-sm uppercase tracking-[0.3em] text-slate-600">
-                Palestine Winter Fundraiser
-              </p>
-              <p className="text-base font-semibold text-slate-900">
-                2025 Solidarity Campaign
+             
+              <p className="text-xl font-semibold text-slate-900">
+                    Palestine Week 2025
               </p>
             </div>
           </m.div>
