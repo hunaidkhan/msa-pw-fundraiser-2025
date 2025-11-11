@@ -8,18 +8,18 @@ type SiteFooterProps = {
 
 export function SiteFooter({ onDonateClick }: SiteFooterProps) {
   return (
-    <footer className="mt-auto border-t border-black/10 bg-white/80 backdrop-blur-sm">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10 text-sm text-slate-600 md:flex-row md:items-center md:justify-between">
+    <footer className="mt-auto border-t border-black/10 bg-white/80 backdrop-blur-sm transition dark:border-white/10 dark:bg-zinc-900/70">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10 text-sm text-slate-600 dark:text-zinc-300 md:flex-row md:items-center md:justify-between">
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.5 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
         >
-          <p className="text-base font-semibold text-slate-900">
+          <p className="text-base font-semibold text-slate-900 dark:text-white">
             Muslim Students Association · Palestine Relief Committee
           </p>
-          <p className="mt-2 max-w-lg text-sm leading-relaxed text-slate-600">
+          <p className="mt-2 max-w-lg text-sm leading-relaxed text-slate-600 dark:text-zinc-300">
             Every contribution fuels critical aid deliveries, campus education, and direct support for families under occupation.
           </p>
         </motion.div>
@@ -37,7 +37,7 @@ export function SiteFooter({ onDonateClick }: SiteFooterProps) {
           >
             Give Today
           </button>
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-slate-500 dark:text-zinc-400">
             <p>Contact · msa-pal@campus.edu</p>
             <p>© {new Date().getFullYear()} MSA Solidarity Network</p>
           </div>

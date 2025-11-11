@@ -59,13 +59,13 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
 
   return (
     <LazyMotion features={domAnimation}>
-      <div className="flex min-h-screen flex-col bg-gradient-to-br from-emerald-100 via-white to-rose-100">
+      <div className="flex min-h-screen flex-col bg-gradient-to-br from-emerald-100 via-white to-rose-100 transition-colors dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900">
         <SiteHeader onDonateClick={scrollToTeams} />
 
         <main className="relative flex-1 overflow-hidden">
           {/* Animated background orbs with Palestine colors */}
           <m.div
-            className="pointer-events-none absolute -left-20 top-20 h-64 w-64 rounded-full bg-[#007a3d]/25 blur-2xl"
+            className="pointer-events-none absolute -left-20 top-20 h-64 w-64 rounded-full bg-[#007a3d]/25 blur-2xl dark:bg-[#007a3d]/40"
             animate={{
               scale: [1, 1.1, 1.05, 1],
               x: [0, 15, -5, 0],
@@ -79,7 +79,7 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
             }}
           />
           <m.div
-            className="pointer-events-none absolute -right-20 top-32 h-80 w-80 rounded-full bg-[#ce1126]/30 blur-3xl"
+            className="pointer-events-none absolute -right-20 top-32 h-80 w-80 rounded-full bg-[#ce1126]/30 blur-3xl dark:bg-[#ce1126]/35"
             animate={{
               scale: [1, 1.15, 1.08, 1],
               x: [0, -20, -10, 0],
@@ -93,7 +93,7 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
             }}
           />
           <m.div
-            className="pointer-events-none absolute left-1/3 top-1/3 h-80 w-80 rounded-full bg-[#000000]/8 blur-3xl"
+            className="pointer-events-none absolute left-1/3 top-1/3 h-80 w-80 rounded-full bg-[#000000]/8 blur-3xl dark:bg-white/5"
             animate={{
               scale: [1, 1.2, 1.1, 1],
               opacity: [0.08, 0.14, 0.11, 0.08],
@@ -109,7 +109,7 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
             <header className="grid gap-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-center">
               <div className="space-y-6">
                 <m.p
-                  className="inline-flex items-center gap-2 rounded-full bg-white/70 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 shadow"
+                  className="inline-flex items-center gap-2 rounded-full bg-white/70 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 shadow dark:bg-zinc-900/70 dark:text-zinc-300"
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, ease: "easeOut" }}
@@ -118,16 +118,16 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
                 </m.p>
 
                 <m.h1
-                  className="text-4xl font-semibold leading-tight text-slate-950 sm:text-5xl lg:text-[3.4rem]"
+                  className="text-4xl font-semibold leading-tight text-slate-950 sm:text-5xl lg:text-[3.4rem] dark:text-white"
                   initial={{ opacity: 0, y: 24 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.7, ease: "easeOut", delay: 0.1 }}
                 >
-                  Meet the teams powering this week's fundraising efforts.
+                  Meet the teams powering this week’s fundraising efforts.
                 </m.h1>
 
                 <m.p
-                  className="max-w-2xl text-base leading-relaxed text-slate-600 sm:text-lg"
+                  className="max-w-2xl text-base leading-relaxed text-slate-600 sm:text-lg dark:text-zinc-300"
                   initial={{ opacity: 0, y: 24 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
@@ -150,7 +150,7 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
                   <button
                     type="button"
                     onClick={scrollToTeams}
-                    className="inline-flex items-center justify-center rounded-full border border-slate-900/15 bg-white px-6 py-3 text-sm font-semibold text-slate-900 shadow transition hover:border-slate-900/30"
+                    className="inline-flex items-center justify-center rounded-full border border-slate-900/15 bg-white px-6 py-3 text-sm font-semibold text-slate-900 shadow transition hover:border-slate-900/30 dark:border-zinc-700 dark:bg-zinc-900/70 dark:text-zinc-100 dark:hover:border-zinc-500"
                   >
                     Donate to a team
                   </button>
@@ -158,7 +158,7 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
               </div>
 
             <m.aside
-              className="relative rounded-[32px] border border-slate-200 bg-white/90 p-6 shadow-2xl"
+              className="relative rounded-[32px] border border-slate-200 bg-white/90 p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900/80"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, ease: "easeOut", delay: 0.3 }}
@@ -168,7 +168,7 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
                 Leaderboard
               </div>
 
-              <div className="space-y-5 text-sm">
+              <div className="space-y-5 text-sm text-slate-700 dark:text-zinc-200">
                 {featuredTeams.length > 0 ? (
                   featuredTeams.map((team) => {
                     const goal = team.fundraisingGoal ?? 0;
@@ -178,26 +178,26 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
                     return (
                       <div
                         key={team.id}
-                        className="rounded-2xl border border-slate-100 bg-white/80 p-5 shadow"
+                        className="rounded-2xl border border-slate-100 bg-white/80 p-5 shadow dark:border-zinc-800 dark:bg-zinc-900/70"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="text-sm font-semibold text-slate-900">{team.name}</p>
+                            <p className="text-sm font-semibold text-slate-900 dark:text-white">{team.name}</p>
                             {team.description ? (
-                              <p className="mt-1 text-xs leading-relaxed text-slate-600">{team.description}</p>
+                              <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-zinc-300">{team.description}</p>
                             ) : null}
                           </div>
-                          <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
+                          <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500 dark:text-zinc-400">
                             {progress}%
                           </span>
                         </div>
-                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
+                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-zinc-800">
                           <div
                             className="h-full rounded-full bg-gradient-to-r from-[#007a3d] via-[#000000] to-[#ce1126]"
                             style={{ width: `${progress}%` }}
                           />
                         </div>
-                        <p className="mt-2 text-xs text-slate-500">
+                        <p className="mt-2 text-xs text-slate-500 dark:text-zinc-400">
                           ${raised.toLocaleString()} raised of {goal > 0 ? `$${goal.toLocaleString()}` : "an open goal"}
                         </p>
                       </div>
