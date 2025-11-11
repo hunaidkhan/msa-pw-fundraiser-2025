@@ -58,46 +58,43 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
         <main className="relative flex-1 overflow-hidden">
           {/* Animated background orbs with Palestine colors */}
           <m.div
-            className="pointer-events-none absolute -left-24 top-20 h-72 w-72 rounded-full bg-[#007a3d]/30 blur-3xl"
+            className="pointer-events-none absolute -left-20 top-20 h-64 w-64 rounded-full bg-[#007a3d]/25 blur-2xl"
             animate={{
-              scale: [1, 1.15, 1],
-              x: [0, 20, 0],
-              y: [0, 15, 0],
-              opacity: [0.3, 0.4, 0.3],
+              scale: [1, 1.1, 1.05, 1],
+              x: [0, 15, -5, 0],
+              y: [0, 10, 5, 0],
+              opacity: [0.25, 0.35, 0.3, 0.25],
             }}
             transition={{
-              duration: 10,
+              duration: 6,
               repeat: Infinity,
-              ease: "easeInOut",
-              times: [0, 0.5, 1],
+              ease: "linear",
             }}
           />
           <m.div
             className="pointer-events-none absolute -right-20 top-32 h-80 w-80 rounded-full bg-[#ce1126]/30 blur-3xl"
             animate={{
-              scale: [1, 1.2, 1],
-              x: [0, -25, 0],
-              y: [0, 20, 0],
-              opacity: [0.3, 0.4, 0.3],
+              scale: [1, 1.15, 1.08, 1],
+              x: [0, -20, -10, 0],
+              y: [0, 15, 8, 0],
+              opacity: [0.3, 0.4, 0.35, 0.3],
             }}
             transition={{
-              duration: 12,
+              duration: 7,
               repeat: Infinity,
-              ease: "easeInOut",
-              times: [0, 0.5, 1],
+              ease: "linear",
             }}
           />
           <m.div
             className="pointer-events-none absolute left-1/3 top-1/3 h-80 w-80 rounded-full bg-[#000000]/8 blur-3xl"
             animate={{
-              scale: [1, 1.3, 1],
-              opacity: [0.08, 0.15, 0.08],
+              scale: [1, 1.2, 1.1, 1],
+              opacity: [0.08, 0.14, 0.11, 0.08],
             }}
             transition={{
-              duration: 15,
+              duration: 8,
               repeat: Infinity,
-              ease: "easeInOut",
-              times: [0, 0.5, 1],
+              ease: "linear",
             }}
           />
           {/* Flash of Palestine colors on load */}
