@@ -1,3 +1,9 @@
+/*
+ * COMMENTED OUT FOR FUTURE REUSE - Original Home Page Content
+ * This was the original landing page with Palestine Week 2025 fundraiser content
+ */
+
+/*
 "use client";
 
 import { useState } from "react";
@@ -216,3 +222,28 @@ export default function HomePage() {
     </LazyMotion>
   );
 }
+*/
+
+// NEW HOME PAGE - Teams listing (copied from /teams)
+import type { Metadata } from "next";
+
+import { getAllTeams } from "@/config/teams";
+import { TeamsPageShell } from "./teams/TeamsPageShell";
+
+// Use ISR with 60-second revalidation instead of force-dynamic
+export const revalidate = 60;
+export const runtime = "nodejs";
+
+export const metadata: Metadata = {
+  title: "Meet Our Teams | Palestine Solidarity Fundraiser",
+  description:
+    "Discover the teams championing relief, resilience, and hope for communities across Palestine.",
+};
+
+const HomePage = async () => {
+  const teams = await getAllTeams();
+
+  return <TeamsPageShell teams={teams} />;
+};
+
+export default HomePage;
