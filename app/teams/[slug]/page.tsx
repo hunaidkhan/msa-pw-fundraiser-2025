@@ -7,7 +7,7 @@ import { DonateInline } from "./DonateInline";
 import { totalsByTeam } from "@/lib/donationsStore";
 
 // Use ISR with 30-second revalidation instead of force-dynamic
-export const revalidate = 30;
+export const revalidate = 20;
 export const runtime = "nodejs";
 
 // To switch to root-level slugs (e.g., /team-falcon), move this file to app/[slug]/page.tsx and update links accordingly.
