@@ -66,8 +66,8 @@ const TeamPage = async ({ params, searchParams }: TeamPageProps) => {
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#f2fbf6] via-white to-[#fff5f5] text-slate-900">
       {/* Animated color washes echoing the Palestine flag */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -left-24 top-24 h-72 w-72 rounded-full bg-[#007a3d]/20 blur-3xl animate-pulse" />
-        <div className="absolute -right-24 bottom-16 h-72 w-72 rounded-full bg-[#ce1126]/20 blur-3xl animate-pulse" />
+        <div className="absolute -left-24 top-24 h-72 w-72 rounded-full bg-[#007a3d]/20 blur-3xl motion-safe:animate-pulse" />
+        <div className="absolute -right-24 bottom-16 h-72 w-72 rounded-full bg-[#ce1126]/20 blur-3xl motion-safe:animate-pulse" />
         <div className="absolute inset-x-0 top-0 h-2 bg-gradient-to-r from-[#007a3d] via-black to-[#ce1126]" />
         <div className="absolute inset-x-10 top-28 h-px bg-gradient-to-r from-transparent via-black/10 to-transparent" />
       </div>
@@ -154,13 +154,6 @@ const TeamPage = async ({ params, searchParams }: TeamPageProps) => {
         </section>
       </div>
 
-      <style jsx>{`
-        @media (prefers-reduced-motion: reduce) {
-          .animate-pulse {
-            animation: none;
-          }
-        }
-      `}</style>
     </div>
   );
 };
