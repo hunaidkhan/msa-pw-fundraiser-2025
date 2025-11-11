@@ -46,7 +46,7 @@ export const TeamCard = ({ team }: TeamCardProps) => {
         href={`/teams/${team.slug}`}
         className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-emerald-600 via-black to-red-600 px-6 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-500/30 transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
       >
-        Explore Team
+        Donate Now
       </Link>
     </article>
   );
