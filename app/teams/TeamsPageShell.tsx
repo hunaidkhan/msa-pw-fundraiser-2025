@@ -16,6 +16,13 @@ type TeamsPageShellProps = {
 export function TeamsPageShell({ teams }: TeamsPageShellProps) {
   const [isDonateOpen, setIsDonateOpen] = useState(false);
 
+  const scrollToTeams = () => {
+    const teamsSection = document.getElementById('teams');
+    if (teamsSection) {
+      teamsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   const { totalRaised, totalGoal, overallProgress } = useMemo(() => {
     const totals = teams.reduce(
       (accumulator, team) => {
@@ -53,7 +60,7 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
   return (
     <LazyMotion features={domAnimation}>
       <div className="flex min-h-screen flex-col bg-gradient-to-br from-emerald-100 via-white to-rose-100">
-        <SiteHeader onDonateClick={() => setIsDonateOpen(true)} />
+        <SiteHeader onDonateClick={scrollToTeams} />
 
         <main className="relative flex-1 overflow-hidden">
           {/* Animated background orbs with Palestine colors */}
