@@ -10,12 +10,20 @@ export function SiteHeader() {
   const pathname = usePathname();
 
   const handleDonateClick = useCallback(() => {
-    const targetId = "teamshell";
+    const targetId = "teams";
 
     if (typeof window !== "undefined" && pathname === "/") {
       const element = document.getElementById(targetId);
+
       if (element) {
-        element.scrollIntoView({ behavior: "smooth" });
+        const headerElement = document.querySelector("header");
+        const headerHeight =
+          headerElement instanceof HTMLElement ? headerElement.offsetHeight : 0;
+        const offsetGap = 16;
+        const elementTop = element.getBoundingClientRect().top + window.scrollY;
+        const offsetPosition = Math.max(elementTop - headerHeight - offsetGap, 0);
+
+        window.scrollTo({ top: offsetPosition, behavior: "smooth" });
         return;
       }
     }
