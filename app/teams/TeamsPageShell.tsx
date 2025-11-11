@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { LazyMotion, domAnimation, m } from "framer-motion";
 
 import DonateModal from "@/components/DonateModal";
 import SiteHeader from "@/components/SiteHeader";
@@ -14,6 +15,13 @@ type TeamsPageShellProps = {
 
 export function TeamsPageShell({ teams }: TeamsPageShellProps) {
   const [isDonateOpen, setIsDonateOpen] = useState(false);
+
+  const scrollToTeams = () => {
+    const teamsSection = document.getElementById('teams');
+    if (teamsSection) {
+      teamsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   const { totalRaised, totalGoal, overallProgress } = useMemo(() => {
     const totals = teams.reduce(
@@ -50,45 +58,110 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-emerald-50 via-white to-rose-50">
-      <SiteHeader onDonateClick={() => setIsDonateOpen(true)} />
+    <LazyMotion features={domAnimation}>
+      <div className="flex min-h-screen flex-col bg-gradient-to-br from-emerald-100 via-white to-rose-100">
+        <SiteHeader onDonateClick={scrollToTeams} />
 
-      <main className="relative flex-1 overflow-hidden">
-        <div className="pointer-events-none absolute -left-24 top-16 h-72 w-72 rounded-full bg-[#007a3d]/20 blur-3xl" />
-        <div className="pointer-events-none absolute -right-20 bottom-10 h-80 w-80 rounded-full bg-[#ce1126]/20 blur-3xl" />
+        <main className="relative flex-1 overflow-hidden">
+          {/* Animated background orbs with Palestine colors */}
+          <m.div
+            className="pointer-events-none absolute -left-20 top-20 h-64 w-64 rounded-full bg-[#007a3d]/25 blur-2xl"
+            animate={{
+              scale: [1, 1.1, 1.05, 1],
+              x: [0, 15, -5, 0],
+              y: [0, 10, 5, 0],
+              opacity: [0.25, 0.35, 0.3, 0.25],
+            }}
+            transition={{
+              duration: 6,
+              repeat: Infinity,
+              ease: "linear",
+            }}
+          />
+          <m.div
+            className="pointer-events-none absolute -right-20 top-32 h-80 w-80 rounded-full bg-[#ce1126]/30 blur-3xl"
+            animate={{
+              scale: [1, 1.15, 1.08, 1],
+              x: [0, -20, -10, 0],
+              y: [0, 15, 8, 0],
+              opacity: [0.3, 0.4, 0.35, 0.3],
+            }}
+            transition={{
+              duration: 7,
+              repeat: Infinity,
+              ease: "linear",
+            }}
+          />
+          <m.div
+            className="pointer-events-none absolute left-1/3 top-1/3 h-80 w-80 rounded-full bg-[#000000]/8 blur-3xl"
+            animate={{
+              scale: [1, 1.2, 1.1, 1],
+              opacity: [0.08, 0.14, 0.11, 0.08],
+            }}
+            transition={{
+              duration: 8,
+              repeat: Infinity,
+              ease: "linear",
+            }}
+          />
 
-        <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-16 px-6 py-16">
-          <header className="grid gap-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-center">
-            <div className="space-y-6">
-              <p className="inline-flex items-center gap-2 rounded-full bg-white/70 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 shadow">
-                Winter 2025 Solidarity Drive
-              </p>
-
-              <h1 className="text-4xl font-semibold leading-tight text-slate-950 sm:text-5xl lg:text-[3.4rem]">
-                Meet the teams powering relief, resilience, and student solidarity.
-              </h1>
-
-              <p className="max-w-2xl text-base leading-relaxed text-slate-600 sm:text-lg">
-                Browse active campus and community crews organizing for Palestine. Each team channels mutual aid, cultural programming, and advocacy into tangible relief. Join their momentum or start a new squad of your own.
-              </p>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Link
-                  href="/teams/register"
-                  className="inline-flex items-center justify-center rounded-full bg-[#ce1126] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#ce1126]/40 transition hover:bg-[#b20d1f]"
+          <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-16 px-6 py-16">
+            <header className="grid gap-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-center">
+              <div className="space-y-6">
+                <m.p
+                  className="inline-flex items-center gap-2 rounded-full bg-white/70 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 shadow"
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, ease: "easeOut" }}
                 >
-                  Start a team
-                </Link>
-                <Link
-                  href="/teams/explore"
-                  className="inline-flex items-center justify-center rounded-full border border-slate-900/15 bg-white px-6 py-3 text-sm font-semibold text-slate-900 shadow transition hover:border-slate-900/30"
+                  Winter 2025 Solidarity Drive
+                </m.p>
+
+                <m.h1
+                  className="text-4xl font-semibold leading-tight text-slate-950 sm:text-5xl lg:text-[3.4rem]"
+                  initial={{ opacity: 0, y: 24 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, ease: "easeOut", delay: 0.1 }}
                 >
-                  Donate to a team
-                </Link>
+                  Meet the teams powering relief, resilience, and student solidarity.
+                </m.h1>
+
+                <m.p
+                  className="max-w-2xl text-base leading-relaxed text-slate-600 sm:text-lg"
+                  initial={{ opacity: 0, y: 24 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
+                >
+                  Browse active campus and community crews organizing for Palestine. Each team channels mutual aid, cultural programming, and advocacy into tangible relief. Join their momentum or start a new squad of your own.
+                </m.p>
+
+                <m.div
+                  className="flex flex-col gap-3 sm:flex-row"
+                  initial={{ opacity: 0, y: 24 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, ease: "easeOut", delay: 0.3 }}
+                >
+                  <Link
+                    href="/teams/register"
+                    className="inline-flex items-center justify-center rounded-full bg-[#ce1126] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#ce1126]/40 transition hover:bg-[#b20d1f]"
+                  >
+                    Start a team
+                  </Link>
+                  <Link
+                    href="/teams/explore"
+                    className="inline-flex items-center justify-center rounded-full border border-slate-900/15 bg-white px-6 py-3 text-sm font-semibold text-slate-900 shadow transition hover:border-slate-900/30"
+                  >
+                    Donate to a team
+                  </Link>
+                </m.div>
               </div>
-            </div>
 
-            <aside className="relative rounded-[32px] border border-slate-200 bg-white/90 p-6 shadow-2xl">
+            <m.aside
+              className="relative rounded-[32px] border border-slate-200 bg-white/90 p-6 shadow-2xl"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, ease: "easeOut", delay: 0.3 }}
+            >
               <div className="absolute -top-6 right-6 inline-flex items-center gap-2 rounded-full bg-[#007a3d] px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white shadow">
                 <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-white" />
                 Live impact
@@ -135,7 +208,7 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
                   </p>
                 )}
               </div>
-            </aside>
+            </m.aside>
           </header>
 
           <section className="grid gap-6 sm:grid-cols-3">
@@ -186,7 +259,8 @@ export function TeamsPageShell({ teams }: TeamsPageShellProps) {
       </main>
 
       <DonateModal open={isDonateOpen} onOpenChange={setIsDonateOpen} />
-    </div>
+      </div>
+    </LazyMotion>
   );
 }
 
