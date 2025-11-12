@@ -6,14 +6,40 @@ import { deleteTeam } from "@/config/teams";
 export const runtime = "nodejs";
 
 /**
+ * Verifies the admin API key from request headers
+ */
+function verifyAdminAuth(request: Request): boolean {
+  const adminApiKey = process.env.ADMIN_API_KEY;
+
+  // If no admin key is configured, deny all delete requests for security
+  if (!adminApiKey) {
+    console.error("ADMIN_API_KEY not configured in environment variables");
+    return false;
+  }
+
+  const authHeader = request.headers.get("x-admin-api-key");
+  return authHeader === adminApiKey;
+}
+
+/**
  * DELETE /api/teams/[slug]
- * Deletes a team by its slug
+ * Deletes a team by its slug (Admin only)
+ *
+ * Requires: x-admin-api-key header matching ADMIN_API_KEY env variable
  */
 export async function DELETE(
   request: Request,
   { params }: { params: { slug: string } }
 ) {
   try {
+    // Verify admin authentication
+    if (!verifyAdminAuth(request)) {
+      return NextResponse.json(
+        { error: "Unauthorized. Valid admin API key required." },
+        { status: 401 }
+      );
+    }
+
     const { slug } = params;
 
     if (!slug || typeof slug !== "string") {
