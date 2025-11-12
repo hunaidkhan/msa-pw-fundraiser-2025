@@ -1,4 +1,4 @@
-// app/api/teams/[slug]/route.ts
+// app/api/admin/teams/[slug]/route.ts
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { deleteTeam } from "@/config/teams";
@@ -22,7 +22,7 @@ function verifyAdminAuth(request: Request): boolean {
 }
 
 /**
- * DELETE /api/teams/[slug]
+ * DELETE /api/admin/teams/[slug]
  * Deletes a team by its slug (Admin only)
  *
  * Requires: x-admin-api-key header matching ADMIN_API_KEY env variable

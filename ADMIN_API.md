@@ -2,7 +2,7 @@
 
 ## Team Deletion Endpoint
 
-### DELETE `/api/teams/[slug]`
+### DELETE `/api/admin/teams/[slug]`
 
 Deletes a team by its slug. This endpoint requires admin authentication.
 
@@ -36,7 +36,7 @@ x-admin-api-key: your-secure-admin-api-key-here
 
 ```bash
 # Delete a team
-curl -X DELETE https://your-domain.com/api/teams/team-slug \
+curl -X DELETE https://your-domain.com/api/admin/teams/team-slug \
   -H "x-admin-api-key: your-secure-admin-api-key-here"
 ```
 
