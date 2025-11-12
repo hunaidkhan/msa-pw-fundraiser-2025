@@ -29,7 +29,7 @@ function verifyAdminAuth(request: Request): boolean {
  */
 export async function DELETE(
   request: Request,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     // Verify admin authentication
@@ -40,7 +40,7 @@ export async function DELETE(
       );
     }
 
-    const { slug } = params;
+    const { slug } = await params;
 
     if (!slug || typeof slug !== "string") {
       return NextResponse.json(
