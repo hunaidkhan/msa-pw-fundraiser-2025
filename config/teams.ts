@@ -29,38 +29,40 @@ const DEFAULT_LOGO_URL = "/logos/falcon.svg";
 const DEFAULT_DESCRIPTION =
   "This community-led team is rallying supporters to fund urgent Palestinian relief.";
 
-const BASE_TEAMS: Team[] = [
-  {
-    id: "team-falcon",
-    slug: "team-falcon",
-    name: "Team Falcon",
-    description:
-      "Supporting urgent relief and sustainable community programs across Palestine.",
-    logoUrl: "/logos/falcon.svg",
-    fundraisingGoal: 50000,
-    fundraisingRaised: 23500,
-  },
-  {
-    id: "team-phoenix",
-    slug: "team-phoenix",
-    name: "Team Phoenix",
-    description:
-      "Rallying global allies to fund medical aid and trauma counseling for families.",
-    logoUrl: "/logos/phoenix.svg",
-    fundraisingGoal: 65000,
-    fundraisingRaised: 41200,
-  },
-  {
-    id: "team-lion",
-    slug: "team-lion",
-    name: "Team Lion",
-    description:
-      "Investing in youth empowerment, education, and rebuilding initiatives in Gaza.",
-    logoUrl: "/logos/lion.svg",
-    fundraisingGoal: 80000,
-    fundraisingRaised: 58950,
-  },
-];
+// Base teams commented out as requested
+// const BASE_TEAMS: Team[] = [
+//   {
+//     id: "team-falcon",
+//     slug: "team-falcon",
+//     name: "Team Falcon",
+//     description:
+//       "Supporting urgent relief and sustainable community programs across Palestine.",
+//     logoUrl: "/logos/falcon.svg",
+//     fundraisingGoal: 50000,
+//     fundraisingRaised: 23500,
+//   },
+//   {
+//     id: "team-phoenix",
+//     slug: "team-phoenix",
+//     name: "Team Phoenix",
+//     description:
+//       "Rallying global allies to fund medical aid and trauma counseling for families.",
+//     logoUrl: "/logos/phoenix.svg",
+//     fundraisingGoal: 65000,
+//     fundraisingRaised: 41200,
+//   },
+//   {
+//     id: "team-lion",
+//     slug: "team-lion",
+//     name: "Team Lion",
+//     description:
+//       "Investing in youth empowerment, education, and rebuilding initiatives in Gaza.",
+//     logoUrl: "/logos/lion.svg",
+//     fundraisingGoal: 80000,
+//     fundraisingRaised: 58950,
+//   },
+// ];
+const BASE_TEAMS: Team[] = [];
 
 const FILE_NAME = "teams.json"; // deterministic blob key
 
@@ -225,20 +227,8 @@ export function teamNameExists(name: string, teams: Team[]): boolean {
 }
 
 export async function getAllTeams(): Promise<Team[]> {
-  const dynamicTeams = await loadDynamicTeams();
-  const merged = new Map<string, Team>();
-
-  for (const team of BASE_TEAMS) {
-    merged.set(team.slug, team);
-  }
-
-  for (const team of dynamicTeams) {
-    if (!merged.has(team.slug)) {
-      merged.set(team.slug, team);
-    }
-  }
-
-  return Array.from(merged.values());
+  // Now only returns dynamic teams (BASE_TEAMS is empty)
+  return await loadDynamicTeams();
 }
 
 export async function getTeamBySlug(slug: string): Promise<Team | undefined> {
@@ -276,16 +266,8 @@ export async function addTeam(input: AddTeamInput): Promise<Team> {
     goal = input.goal;
   }
 
-  // Load dynamic teams once (will also be used to build the full team list)
-  const dynamicTeams = await loadDynamicTeams();
-
-  // Build the full team list by merging with BASE_TEAMS
-  const allTeams = [...BASE_TEAMS];
-  for (const team of dynamicTeams) {
-    if (!allTeams.find(t => t.slug === team.slug)) {
-      allTeams.push(team);
-    }
-  }
+  // Load all existing teams
+  const allTeams = await loadDynamicTeams();
 
   // Check for duplicate name
   if (teamNameExists(name, allTeams)) {
@@ -308,10 +290,36 @@ export async function addTeam(input: AddTeamInput): Promise<Team> {
     contactEmail: email,
   };
 
-  // Add new team to dynamic teams and save
-  dynamicTeams.push(newTeam);
-  await saveDynamicTeams(dynamicTeams);
+  // Add new team to existing teams and save
+  allTeams.push(newTeam);
+  await saveDynamicTeams(allTeams);
 
   return newTeam;
+}
+
+/**
+ * Deletes a team by its slug
+ * Returns true if the team was found and deleted, false if not found
+ */
+export async function deleteTeam(slug: string): Promise<boolean> {
+  const allTeams = await loadDynamicTeams();
+  const initialLength = allTeams.length;
+
+  const filteredTeams = allTeams.filter((team) => team.slug !== slug);
+
+  // If no team was removed, return false
+  if (filteredTeams.length === initialLength) {
+    return false;
+  }
+
+  await saveDynamicTeams(filteredTeams);
+  return true;
+}
+
+/**
+ * Deletes all teams
+ */
+export async function deleteAllTeams(): Promise<void> {
+  await saveDynamicTeams([]);
 }
 
